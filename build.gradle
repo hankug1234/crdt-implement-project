@@ -19,17 +19,35 @@ configurations {
 
 repositories {
 	mavenCentral()
+	maven {
+        url "https://repo.akka.io/maven"
+    }
 }
+
+def versions = [
+  ScalaBinary: "2.13"
+]
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	compileOnly 'org.projectlombok:lombok'
+	
+	implementation 'org.projectlombok:lombok:1.18.12'
+	compileOnly 'org.projectlombok:lombok:1.18.12'
+    annotationProcessor 'org.projectlombok:lombok:1.18.12'
+    
+    testCompileOnly 'org.projectlombok:lombok:1.18.12'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.12'
+	
+	
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	annotationProcessor 'org.projectlombok:lombok'
+	
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	
-	implementation 'com.typesafe.akka:akka-actor_2.12:2.5.21'
-	testImplementation 'com.typesafe.akka:akka-testkit_2.12:2.5.21'
+	implementation platform("com.typesafe.akka:akka-bom_${versions.ScalaBinary}:2.8.4")
+  	implementation "com.typesafe.akka:akka-actor-typed_${versions.ScalaBinary}"
+	
+	
 }
 
 tasks.named('test') {

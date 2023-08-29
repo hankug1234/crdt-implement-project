@@ -7,6 +7,6 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @AllArgsConstructor
-public class EndPoint<S,C,E> {
-	private ActorRef<OpBaseProtocal<S,C,E>> endpoint;
+public class EndPoint{
+	private ActorRef<OpBaseProtocal> endpoint;
 }

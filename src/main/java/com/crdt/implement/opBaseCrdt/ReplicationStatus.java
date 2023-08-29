@@ -6,7 +6,7 @@ import lombok.Data;
 
 @AllArgsConstructor
 @Data
-public class ReplicationStatus {
+public class ReplicationStatus  {
 	private EndPoint endpoint;
 	private boolean timeout;
 }

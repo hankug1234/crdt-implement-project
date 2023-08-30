@@ -4,14 +4,14 @@ import com.crdt.implement.vectorClock.VectorClock;
 
 import lombok.Getter;
 @Getter
-public class OpBaseEvent <T> {
+public class OpBaseEvent <E> {
 	private final String originReplicaId; 
 	private final long originSeqNr; 
 	private final long localSeqNr;
 	private final VectorClock vectorClock;
-	private final T data;
+	private final E data;
 	
-	public OpBaseEvent(String originReplicaId, long originSeqNr, long localSeqNr, VectorClock vectorClock, T data) {
+	public OpBaseEvent(String originReplicaId, long originSeqNr, long localSeqNr, VectorClock vectorClock, E data) {
 		this.originReplicaId = originReplicaId;
 		this.originSeqNr = originSeqNr;
 		this.localSeqNr = localSeqNr;

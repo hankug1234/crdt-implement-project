@@ -8,5 +8,5 @@ import lombok.Data;
 @Data
 public class ReplicationStatus  {
 	private EndPoint endpoint;
-	private boolean timeout;
+	private Object timeoutKey;
 }

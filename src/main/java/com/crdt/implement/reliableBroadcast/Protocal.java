@@ -30,35 +30,40 @@ public class Protocal{
 	
 	@Getter
 	@AllArgsConstructor
-	public class ReplicateTimeout implements OpBaseProtocal{
+	public static class ReplicateTimeout implements OpBaseProtocal{
 		private final String replicaId;
 	}
 	
 	@Getter
 	@AllArgsConstructor
-	public class Replicated<E> implements OpBaseProtocal{
+	public static class Replicated<E> implements OpBaseProtocal{
 		private final String from;
 		private final long toSeqNr;
-		private final List<E> events;
+		private final List<OpBaseEvent<E>> events;
 	}
 	
 	@Data
-	public class Query implements OpBaseProtocal{
+	public static class Query implements OpBaseProtocal{
 	}
 	
 	@Getter
 	@AllArgsConstructor
-	public class Command<C> implements OpBaseProtocal{
+	public static class Command<C> implements OpBaseProtocal{
 		private final C command;
 	}
 	
 	@Getter
 	@AllArgsConstructor
-	public class Loaded<S> implements OpBaseProtocal{ 
+	public static class Loaded<S> implements OpBaseProtocal{ 
 		private final ReplicationState<S> replicationState;
 	}
 	
 	@Data
-	public class Snapshot implements OpBaseProtocal{
+	public static class Snapshot implements OpBaseProtocal{
+	}
+	
+	@Data
+	public static class Stop implements OpBaseProtocal{
+		
 	}
 }

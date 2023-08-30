@@ -19,7 +19,7 @@ public class ReplicationState <S> {
 	private long seqNr;
 	private final VectorClock vectorClock;
 	private final Map<String,Long> observed;
-	private final S crdt;
+	private S crdt;
 	
 	public ReplicationState(String replicaId,S crdt) {
 		this.replicaId = replicaId;

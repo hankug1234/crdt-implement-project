@@ -30,8 +30,8 @@ public class ReplicationState <S> {
 		this.crdt = crdt;
 	}
 	
-	public boolean unseen(String replicaId, OpBaseEvent event) {
-		long observedSeqNr = this.observed.get(replicaId);
+	public boolean unseen(OpBaseEvent event) {
+		long observedSeqNr = this.observed.get(event.getOriginReplicaId());
 		if(observedSeqNr >= event.getOriginSeqNr()) return false;
 		else return event.getVectorClock().compareTo(this.vectorClock) > Ord.Eq.getValue(); 
 	}

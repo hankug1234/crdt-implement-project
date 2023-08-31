@@ -13,4 +13,5 @@ public interface OpBaseCrdtDB<S,E> {
 	public CompletableFuture<Optional<ReplicationState<S>>> LoadSnapshot(String replicaId);
 	public CompletableFuture<List<OpBaseEvent<E>>> LoadEvents(String replicaId,long startSeqNr);
 	public CompletableFuture<Boolean> SaveEvents(String replicaId,List<OpBaseEvent<E>> events);
+	
 }

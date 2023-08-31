@@ -5,6 +5,7 @@ import java.util.List;
 import com.crdt.implement.opBaseCrdt.ReplicationState;
 import com.crdt.implement.vectorClock.VectorClock;
 
+import akka.actor.typed.ActorRef;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -42,8 +43,10 @@ public class Protocal{
 		private final List<OpBaseEvent<E>> events;
 	}
 	
-	@Data
-	public static class Query implements OpBaseProtocal{
+	@Getter
+	@AllArgsConstructor
+	public static class Query<S> implements OpBaseProtocal{
+		private final ActorRef<S> replyTo;
 	}
 	
 	@Getter
@@ -58,11 +61,13 @@ public class Protocal{
 		private final ReplicationState<S> replicationState;
 	}
 	
-	@Data
+	@Getter
+	@AllArgsConstructor
 	public static class Snapshot implements OpBaseProtocal{
 	}
 	
-	@Data
+	@Getter
+	@AllArgsConstructor
 	public static class Stop implements OpBaseProtocal{
 		
 	}

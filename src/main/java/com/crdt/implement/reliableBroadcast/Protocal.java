@@ -45,14 +45,15 @@ public class Protocal{
 	
 	@Getter
 	@AllArgsConstructor
-	public static class Query<S> implements OpBaseProtocal{
-		private final ActorRef<S> replyTo;
+	public static class Query implements OpBaseProtocal{
+		private final ActorRef<OpBaseResponse> replyTo;
 	}
 	
 	@Getter
 	@AllArgsConstructor
 	public static class Command<C> implements OpBaseProtocal{
 		private final C command;
+		private final ActorRef<OpBaseResponse> replyTo;
 	}
 	
 	@Getter
@@ -64,6 +65,12 @@ public class Protocal{
 	@Getter
 	@AllArgsConstructor
 	public static class Snapshot implements OpBaseProtocal{
+	}
+	
+	@Getter
+	@AllArgsConstructor
+	public static class Res<Q> implements OpBaseResponse{
+		private final Q res;
 	}
 	
 	@Getter

@@ -27,7 +27,7 @@ import akka.actor.typed.javadsl.StashBuffer;
 import akka.actor.typed.javadsl.TimerScheduler;
 
 
-public class Replicator<S,Q,C,E> extends AbstractBehavior{
+public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 	
 	private final StashBuffer<OpBaseProtocal> buffer;
 	private OpBaseCrdtDB<S,E> db;
@@ -38,7 +38,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior{
 	private Map<String,ReplicationStatus> replicatingNodes;
 	private TimerScheduler<OpBaseProtocal> timer;
 	
-	public Replicator(ActorContext context,StashBuffer<OpBaseProtocal> buffer,OpBaseCrdtDB db,String replicaId
+	public Replicator(ActorContext<OpBaseProtocal> context,StashBuffer<OpBaseProtocal> buffer,OpBaseCrdtDB<S,E> db,String replicaId
 			,OpBaseCrdtOperation<S,Q,C,E> crdt) {
 		super(context);
 		this.buffer = buffer;
@@ -51,7 +51,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior{
 	
 	public static <E> void replay(String replicatedNodeId, VectorClock filter,EndPoint target,List<OpBaseEvent<E>> events, int count){
 		long lastSeqNr = 0L;
-		List<OpBaseEvent<E>> buffers = new ArrayList();
+		List<OpBaseEvent<E>> buffers = new ArrayList<>();
 		for(OpBaseEvent<E> event : events) {
 			if(event.getVectorClock().compareTo(filter) > Ord.Eq.getValue()) {
 				buffers.add(event);
@@ -71,17 +71,16 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior{
 		Object timerKey = this.replicatingNodes.get(replicatedNodeId).getTimeoutKey();
 		timer.cancel(timerKey);
 		timer.startTimerAtFixedRate(timerKey,new Protocal.ReplicateTimeout(replicatedNodeId),Duration.ofSeconds(5));
-		
 	}
 	
 	public static <S,Q,C,E>  Behavior<OpBaseProtocal> create(OpBaseCrdtDB<S,E> db,String replicaId,OpBaseCrdtOperation<S,Q,C,E> crdt){
 		return Behaviors.withStash(100, stash->{
 			return Behaviors.setup(ctx->{
 				
-				CompletionStage<ReplicationState<S>> latestState =  db.LoadSnapshot(replicaId).thenCompose((Optional<ReplicationState<S>> option)->{
+				CompletionStage<ReplicationState<S>> latestState =  db.LoadSnapshot(crdt::copy).thenCompose((Optional<ReplicationState<S>> option)->{
 					final ReplicationState<S> state = option.orElseGet(()->new ReplicationState<S>(replicaId,crdt.Default()));
 					
-					CompletableFuture<List<OpBaseEvent<E>>> events = db.LoadEvents(replicaId, state.getSeqNr()+1L);
+					CompletableFuture<List<OpBaseEvent<E>>> events = db.LoadEvents(state.getSeqNr()+1L);
 					
 					return events.thenCompose((List<OpBaseEvent<E>> list) -> {
 						return CompletableFuture.supplyAsync(()->{
@@ -124,12 +123,12 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior{
 	}
 	
 	private Behavior<OpBaseProtocal> onQuery(Protocal.Query query){
-		query.getReplyTo().tell(crdt.Query(this.state.getCrdt()));
+		query.getReplyTo().tell(new Protocal.Res<Q>(crdt.Query(this.state.getCrdt())));
 		return Behaviors.same();
 	}
 	
 	private Behavior<OpBaseProtocal> onReplicate(Protocal.Replicate replicate){
-		CompletionStage<List<OpBaseEvent<E>>> events = db.LoadEvents(replicaId, replicate.getSeqNr());
+		CompletionStage<List<OpBaseEvent<E>>> events = db.LoadEvents(replicate.getSeqNr());
 		events.whenComplete((value,cause)->{
 			if(cause == null) {
 				Replicator.replay(replicaId, replicate.getFilter(), replicate.getReplayTo(), value, replicate.getMaxCount());
@@ -149,7 +148,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior{
 			if(replicated.getToSeqNr() > observedSeqNr) {
 				this.state.getObserved().put(replicated.getFrom(), replicated.getToSeqNr());
 			}
-			db.SaveSnapshot(this.state.getCrdt());
+			db.SaveSnapshot(state.clone(crdt.copy(state.getCrdt())));
 		}else {
 			List<OpBaseEvent<E>> saveBuffers = new ArrayList<>();
 			S crdtState = this.state.getCrdt();
@@ -169,10 +168,10 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior{
 				}
 			}
 			this.state.setCrdt(crdtState);
-			db.SaveEvents(replicaId, saveBuffers);
+			db.SaveEvents(saveBuffers);
 			
 			this.replicatingNodes.get(replicated.getFrom()).getEndpoint()
-			.getEndpoint().tell(new Protocal.Replicate(state.getSeqNr()+1L, 100, state.getVectorClock(),new EndPoint(getContext().getSelf())));
+			.getEndpoint().tell(new Protocal.Replicate(state.getSeqNr()+1L, 100, state.getVectorClock().clone(),new EndPoint(getContext().getSelf())));
 			
 			refreshTimeout(replicated.getFrom());
 		}
@@ -183,25 +182,45 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior{
 	private Behavior<OpBaseProtocal> onReplicateTimeout(Protocal.ReplicateTimeout timeout){
 		long observedSeqNr = this.state.getObserved().getOrDefault(timeout.getReplicaId(), 0L);
 		EndPoint replyTo = this.replicatingNodes.get(timeout.getReplicaId()).getEndpoint();
-		replyTo.getEndpoint().tell(new Protocal.Replicate(observedSeqNr+1L, 100,this.state.getVectorClock(), new EndPoint(getContext().getSelf())));
-		Object timerKey = new Object();
-		
-		timer.startTimerAtFixedRate(timerKey,new Protocal.ReplicateTimeout(timeout.getReplicaId()),Duration.ofSeconds(5));
-		this.replicatingNodes.get(timeout.getReplicaId()).setTimeoutKey(timerKey);;
-		
+		replyTo.getEndpoint().tell(new Protocal.Replicate(observedSeqNr+1L, 100,this.state.getVectorClock().clone(), new EndPoint(getContext().getSelf())));
 		return Behaviors.same();
 	}
 	
 	private Behavior<OpBaseProtocal> onCommand(Protocal.Command<C> command){
-		return null;
+		this.state.setSeqNr(this.state.getSeqNr()+1L);
+		this.state.getVectorClock().inc(state.getReplicaId());
+		
+		E data = this.crdt.Prepare(this.state.getCrdt(), command.getCommand());
+		OpBaseEvent<E> event = new OpBaseEvent<>(this.replicaId, this.state.getSeqNr(), this.state.getSeqNr(), this.state.getVectorClock().clone(), data);
+		
+		this.state.setCrdt(this.crdt.Effect(this.state.getCrdt(), data));
+		
+		db.SaveEvents(List.of(event));
+		
+		
+		command.getReplyTo().tell(new Protocal.Res<Q>(crdt.Query(this.state.getCrdt())));
+		
+		return Behaviors.same();
 	}
 	
 	private Behavior<OpBaseProtocal> onConnect(Protocal.Connect connect){
-		return null;
+		
+		long observedSeqNr = this.state.getObserved().getOrDefault(connect.getReplicaId(), 0L);
+		connect.getEndpoint().getEndpoint().tell(new Protocal.Replicate(observedSeqNr, 100, state.getVectorClock().clone(), new EndPoint(getContext().getSelf())));
+		Object timerKey = new Object();
+		this.replicatingNodes.put(connect.getReplicaId(), new ReplicationStatus(new EndPoint(getContext().getSelf()),timerKey));
+		
+		timer.startTimerAtFixedRate(timerKey,new Protocal.ReplicateTimeout(connect.getReplicaId()),Duration.ofSeconds(5));
+		return Behaviors.same();
 	}
 	
 	private Behavior<OpBaseProtocal> onSnapshot(Protocal.Snapshot snapshot){
-		return null;
+		if(this.state.isDirty()) {
+			this.state.setDirty(false);
+			db.SaveSnapshot(state.clone(crdt.copy(state.getCrdt())));
+		}
+		
+		return Behaviors.same();
 	}
 	
 	private Behavior<OpBaseProtocal> timerSettingActive(OpBaseProtocal protocal){

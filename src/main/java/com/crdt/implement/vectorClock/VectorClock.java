@@ -15,6 +15,14 @@ public class VectorClock implements Comparable<VectorClock> {
 		this.vectorClock = new HashMap<>();
 	}
 	
+	public VectorClock(Map<String,Long> vectorClock) {
+		this.vectorClock = new HashMap<>(vectorClock);
+	}
+	
+	public VectorClock clone() {
+		return new VectorClock(this.vectorClock);
+	}
+	
 	private void upsertClock(String replicaId,long logicalTime,BiFunction<Long,Long,Long> f) {
 		vectorClock.merge(replicaId, logicalTime, f);
 	}

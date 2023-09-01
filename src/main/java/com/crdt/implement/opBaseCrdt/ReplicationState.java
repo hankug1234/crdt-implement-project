@@ -1,7 +1,9 @@
 package com.crdt.implement.opBaseCrdt;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.crdt.implement.reliableBroadcast.OpBaseEvent;
 import com.crdt.implement.vectorClock.Ord;
@@ -28,6 +30,14 @@ public class ReplicationState <S> {
 		this.vectorClock = new VectorClock();
 		this.observed = new HashMap<>();
 		this.crdt = crdt;
+	}
+	
+	public ReplicationState<S> clone(S newCrdt){
+		return new ReplicationState(replicaId,false,seqNr,vectorClock.clone(),new HashMap<>(observed),newCrdt);
+	}
+	
+	public boolean isDirty() {
+		return this.isDirty;
 	}
 	
 	public boolean unseen(OpBaseEvent event) {

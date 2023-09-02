@@ -44,8 +44,8 @@ public class ReplicationState <S> {
 		return this.isDirty;
 	}
 	
-	public boolean unseen(OpBaseEvent event) {
-		long observedSeqNr = this.observed.get(event.getOriginReplicaId());
+	public <E> boolean unseen(OpBaseEvent<E> event) {
+		long observedSeqNr = this.observed.getOrDefault(event.getOriginReplicaId(),0L);
 		if(observedSeqNr >= event.getOriginSeqNr()) return false;
 		else return event.getVectorClock().compareTo(this.vectorClock) > Ord.Eq.getValue(); 
 	}

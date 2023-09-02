@@ -34,8 +34,12 @@ class CounterTest {
 		try {
 			a.inc(5L);
 			assertSame(a.qeury(),5L);
-			Thread.sleep(5000);
-			assertSame(b.qeury(),5L);
+			b.inc(2L);
+			b.inc(1L);
+			a.inc(1L);
+			Thread.sleep(15000);
+			assertSame(b.qeury(),9L);
+			assertSame(a.qeury(),9L);
 		}catch(Exception e) {
 			assertTrue(false);
 		}

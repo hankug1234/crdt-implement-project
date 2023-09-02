@@ -80,10 +80,6 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 				CompletionStage<ReplicationState<S>> latestState =  db.LoadSnapshot(crdt::copy).thenCompose((Optional<ReplicationState<S>> option)->{
 					final ReplicationState<S> state = option.orElseGet(()->new ReplicationState<S>(replicaId,crdt.Default()));
 					
-					ctx.getLog().info(" state loaded from db replicaId "
-							+ ":{} seqNr :{} vectorClock : {} observed : {}",state.getReplicaId(),state.getSeqNr(),
-							state.getVectorClock(),state.getObserved());
-					
 					CompletableFuture<List<OpBaseEvent<E>>> events = db.LoadEvents(state.getSeqNr()+1L);
 					
 					return events.thenCompose((List<OpBaseEvent<E>> list) -> {
@@ -101,10 +97,8 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 				
 				ctx.pipeToSelf(latestState, (value,cause)->{
 					if(cause == null) {
-						ctx.getLog().info("snapshot Loaded");
 						return new Protocal.Loaded<S>(value);
 					}else {
-						ctx.getLog().info("Exception occure : "+cause.getCause().toString());
 						return new Protocal.Stop();
 					}
 				});
@@ -227,7 +221,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 		long observedSeqNr = this.state.getObserved().getOrDefault(connect.getReplicaId(), 0L);
 		connect.getEndpoint().getEndpoint().tell(new Protocal.Replicate(observedSeqNr, 100, state.getVectorClock().clone(), new EndPoint(getContext().getSelf())));
 		Object timerKey = new Object();
-		this.replicatingNodes.put(connect.getReplicaId(), new ReplicationStatus(new EndPoint(getContext().getSelf()),timerKey));
+		this.replicatingNodes.put(connect.getReplicaId(), new ReplicationStatus(connect.getEndpoint(),timerKey));
 		
 		timer.startTimerAtFixedRate(timerKey,new Protocal.ReplicateTimeout(connect.getReplicaId()),Duration.ofSeconds(5));
 		return Behaviors.same();
@@ -254,6 +248,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 	}
 	
 	private Behavior<OpBaseProtocal> active(OpBaseProtocal protocal,TimerScheduler<OpBaseProtocal> timer){
+		this.timer = timer;
 		return Behaviors.receive(OpBaseProtocal.class)
 				.onMessage(Protocal.Query.class, this::onQuery)
 				.onMessage(Protocal.Replicate.class, this::onReplicate)

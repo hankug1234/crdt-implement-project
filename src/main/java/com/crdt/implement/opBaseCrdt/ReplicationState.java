@@ -32,8 +32,12 @@ public class ReplicationState <S> {
 		this.crdt = crdt;
 	}
 	
+	public ReplicationState() {
+		this.replicaId = null; this.vectorClock = null; this.observed = null;
+	}
+	
 	public ReplicationState<S> clone(S newCrdt){
-		return new ReplicationState(replicaId,false,seqNr,vectorClock.clone(),new HashMap<>(observed),newCrdt);
+		return new ReplicationState<S>(replicaId,false,seqNr,vectorClock.clone(),new HashMap<>(observed),newCrdt);
 	}
 	
 	public boolean isDirty() {

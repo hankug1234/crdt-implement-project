@@ -14,13 +14,14 @@ import com.crdt.implement.reliableBroadcast.OpBaseEvent;
 
 public class InMemoryCrdtDB<S,E> implements OpBaseCrdtDB<S,E>{
 	
-	private ReplicationState<S> snapshot = null;
+	private ReplicationState<S> snapshot;
 	private ConcurrentNavigableMap<Long,OpBaseEvent<E>> events;
 	private final Executor executor; // Executors.newFixedThreadPool(100,new ThreadFactory())
 	
 	public InMemoryCrdtDB(Executor executor) {
-		events = new ConcurrentSkipListMap<>();
-		this.executor = executor;
+		this.events = new ConcurrentSkipListMap<>();
+		this.executor = executor; 
+		this.snapshot = new ReplicationState<>();
 	}
 	
 	
@@ -39,7 +40,7 @@ public class InMemoryCrdtDB<S,E> implements OpBaseCrdtDB<S,E>{
 		return CompletableFuture.supplyAsync(()->{
 			Optional<ReplicationState<S>> state;
 			synchronized(snapshot){
-				if(snapshot == null) {
+				if(snapshot.getReplicaId() == null) {
 					state = Optional.empty();
 				}else {
 					state = Optional.of(snapshot.clone(copy.apply(snapshot.getCrdt())));
@@ -52,7 +53,12 @@ public class InMemoryCrdtDB<S,E> implements OpBaseCrdtDB<S,E>{
 	public CompletableFuture<List<OpBaseEvent<E>>> LoadEvents(long startSeqNr){
 		return CompletableFuture.supplyAsync(()->{
 			List<OpBaseEvent<E>> resultBuffers = new ArrayList<>();
-			ConcurrentNavigableMap<Long,OpBaseEvent<E>> subEvents = events.tailMap(null);
+			ConcurrentNavigableMap<Long,OpBaseEvent<E>> subEvents = events.tailMap(startSeqNr);
+			
+			if(subEvents == null) {
+				return resultBuffers;
+			}
+			
 			for(long key : subEvents.keySet()) {
 				resultBuffers.add(subEvents.get(key));
 			}

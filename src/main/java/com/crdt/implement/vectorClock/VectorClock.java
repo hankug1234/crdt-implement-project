@@ -16,7 +16,10 @@ public class VectorClock implements Comparable<VectorClock> {
 	}
 	
 	public VectorClock(Map<String,Long> vectorClock) {
-		this.vectorClock = new HashMap<>(vectorClock);
+		this.vectorClock = new HashMap<>();
+		for(Entry<String,Long> e : vectorClock.entrySet()) {
+			this.vectorClock.put(String.valueOf(e.getKey()), Long.valueOf(e.getValue()));
+		}
 	}
 	
 	public VectorClock clone() {
@@ -24,7 +27,7 @@ public class VectorClock implements Comparable<VectorClock> {
 	}
 	
 	private void upsertClock(String replicaId,long logicalTime,BiFunction<Long,Long,Long> f) {
-		vectorClock.merge(replicaId, logicalTime, f);
+		vectorClock.merge(replicaId, Long.valueOf(logicalTime), f);
 	}
 	
 	public void inc(String replicaId) {
@@ -32,7 +35,7 @@ public class VectorClock implements Comparable<VectorClock> {
 	}
 	
 	public void setLogicalTime(String replicaId, long logicalTime) {
-		this.vectorClock.put(replicaId, logicalTime);
+		this.vectorClock.put(replicaId, Long.valueOf(logicalTime));
 	}
 	
 	public long getLogicalTime(String replicaId) {
@@ -50,7 +53,14 @@ public class VectorClock implements Comparable<VectorClock> {
 	public void merge(VectorClock otherVectorClock) {
 		otherVectorClock.getLogicalTimes().stream().forEach((Entry<String,Long> e)->{
 			String replicaId = e.getKey(); Long logicalTime = e.getValue();
-			this.vectorClock.merge(replicaId, logicalTime, (a,b)->Long.max(a,b));
+			this.vectorClock.merge(replicaId, Long.valueOf(logicalTime), (a,b)->Long.max(a,b));
+		});
+	}
+	
+	public void intersaction(VectorClock otherVectorClock) {
+		otherVectorClock.getLogicalTimes().stream().forEach((Entry<String,Long> e) ->{
+			String replicaId = e.getKey(); Long logicalTime = e.getValue();
+			this.vectorClock.merge(replicaId, Long.valueOf(logicalTime), (a,b)->Long.min(a,b));
 		});
 	}
 	

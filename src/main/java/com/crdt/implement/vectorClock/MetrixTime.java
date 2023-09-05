@@ -12,6 +12,22 @@ public class MetrixTime {
 		metrixTime = new HashMap<>();
 	}
 	
+	public MetrixTime(Map<String,VectorClock> metrixTime) {
+		this.metrixTime = new HashMap<>();
+		Set<String> keys = metrixTime.keySet();
+		for(String key : keys) {
+			this.metrixTime.put(String.valueOf(key), metrixTime.get(key).clone());
+		}
+	}
+	
+	public VectorClock getVectorClock(String replicaId) {
+		return this.metrixTime.get(replicaId);
+	}
+	
+	public MetrixTime clone() {
+		return new MetrixTime(this.metrixTime);
+	}
+	
 	public VectorClock min() {
 		VectorClock foldedMetrix = new VectorClock();
 		this.metrixTime.entrySet().stream().forEach(e->foldedMetrix.intersaction(e.getValue()));

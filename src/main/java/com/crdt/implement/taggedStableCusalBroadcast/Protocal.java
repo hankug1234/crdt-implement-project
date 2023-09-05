@@ -27,7 +27,8 @@ public class Protocal {
 	@Getter
 	@AllArgsConstructor
 	public static class Replicate implements PureOpBaseProtocal{
-		private String repliaId;
+		private String replicaId;
+		private EndPoint replyTo;
 		private VectorClock vectorClock;
 	}
 	

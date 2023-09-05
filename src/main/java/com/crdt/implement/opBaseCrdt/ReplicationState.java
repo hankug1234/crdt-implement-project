@@ -37,7 +37,12 @@ public class ReplicationState <S> {
 	}
 	
 	public ReplicationState<S> clone(S newCrdt){
-		return new ReplicationState<S>(replicaId,false,seqNr,vectorClock.clone(),new HashMap<>(observed),newCrdt);
+		Map<String,Long> newObserved = new HashMap<>();
+		for(String key : this.observed.keySet()) {
+			newObserved.put(String.valueOf(key), Long.valueOf(this.observed.get(key)));
+		}
+		
+		return new ReplicationState<S>(replicaId,false,seqNr,vectorClock.clone(),newObserved,newCrdt);
 	}
 	
 	public boolean isDirty() {

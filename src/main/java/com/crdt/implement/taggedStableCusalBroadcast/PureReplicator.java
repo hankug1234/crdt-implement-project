@@ -249,6 +249,17 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 	
 	private Behavior<PureOpBaseProtocal> onEvicted(Protocal.Evicted evicted){
 		
+		this.state.getEvicted().update(evicted.getReplicaId(), evicted.getVectorClock());
+		this.terminateConnection(evicted.getReplicaId());
+		
+		Set<PureOpBaseEvent<O>> pruned = this.state.getUnstables().stream()
+				.filter(e->!(e.getReplicaId().equals(evicted.getReplicaId()) && e.getVectorClock()
+						.compareTo(this.state.getEvicted().getVectorClock(evicted.getReplicaId())) == Ord.Cc.getValue()))
+				.collect(Collectors.toSet());
+		
+		this.state.setUnstables(pruned);
+		this.state.getObserved().removeVectorClock(evicted.getReplicaId());
+		
 		return Behaviors.same();
 	}
 	

@@ -20,6 +20,10 @@ public class MetrixTime {
 		}
 	}
 	
+	public void removeVectorClock(String replicaId) {
+		this.metrixTime.remove(replicaId);
+	}
+	
 	public VectorClock getVectorClock(String replicaId) {
 		return this.metrixTime.getOrDefault(replicaId, new VectorClock());
 	}
@@ -51,6 +55,6 @@ public class MetrixTime {
 	}
 	
 	public void update(String replicaId,VectorClock vectorClock) {
-		this.metrixTime.merge(String.valueOf(replicaId), vectorClock.clone(), (a,b)->b);
+		this.metrixTime.merge(String.valueOf(replicaId), vectorClock.clone(), (a,b)->{a.merge(b); return a;});
 	}
 }

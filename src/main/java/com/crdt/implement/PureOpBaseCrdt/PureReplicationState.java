@@ -14,8 +14,10 @@ import com.crdt.implement.vectorClock.VectorClock;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 @AllArgsConstructor
 public class PureReplicationState<S,O> {
 	

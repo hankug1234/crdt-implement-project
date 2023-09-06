@@ -21,7 +21,7 @@ public class MetrixTime {
 	}
 	
 	public VectorClock getVectorClock(String replicaId) {
-		return this.metrixTime.get(replicaId);
+		return this.metrixTime.getOrDefault(replicaId, new VectorClock());
 	}
 	
 	public MetrixTime clone() {

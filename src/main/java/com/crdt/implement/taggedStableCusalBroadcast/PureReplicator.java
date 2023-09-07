@@ -52,7 +52,7 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		this.crdt = crdt;
 	}
 
-	public<S,Q,O> Behavior<PureOpBaseProtocal> create(PureCrdtOperation<S,Q,O> crdt,String replicaId, PureReplicationState<S,O> state, Duration timeoutInterval){
+	public static <S,Q,O> Behavior<PureOpBaseProtocal> create(PureCrdtOperation<S,Q,O> crdt,String replicaId, PureReplicationState<S,O> state, Duration timeoutInterval){
 		return Behaviors.withStash(100, stash ->{
 			return Behaviors.setup(ctx-> new PureReplicator<S,Q,O>(ctx,stash,crdt,replicaId,state,timeoutInterval));
 		});
@@ -96,8 +96,7 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		
 		getContext().getLog().info("get Query protocal from {}",query.getReplyTo().toString());
 		
-		Protocal.Res<Q> res = new Protocal.Res<>(crdt.Query(this.state.getStable(),this.state.getUnstables()
-				.stream().map(e->e.getOperation()).collect(Collectors.toSet())));
+		Protocal.Res<Q> res = new Protocal.Res<>(crdt.Query(this.state.getStable(),this.state.getUnstables()));
 		query.getReplyTo().tell(res);
 		
 		return Behaviors.same();
@@ -183,7 +182,7 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 			for(PureOpBaseEvent<O> e1 : unstables) {
 				this.state.getObserved().update(replicated.getFrom(), e1.getVectorClock());
 				Set<PureOpBaseEvent<O>> pruned = this.state.getUnstables().stream()
-						.filter(e2 -> !this.crdt.Obsoletes(e1.getOperation(), e2.getOperation())).collect(Collectors.toSet());
+						.filter(e2 -> !this.crdt.Obsoletes(e1, e2)).collect(Collectors.toSet());
 				pruned.add(e1);
 				
 				state.setUnstables(pruned);
@@ -194,8 +193,7 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 			
 			if(!result.getStableOperations().isEmpty()) {
 				getContext().getLog().info("{} : save stable state",replicaId);
-				S newStable = this.crdt.Apply(this.state.getStable(),result.getStableOperations()
-						.stream().map(e->e.getOperation()).collect(Collectors.toSet()));
+				S newStable = this.crdt.Apply(this.state.getStable(),result.getStableOperations());
 				
 				this.state.setStable(newStable);
 				this.state.setStableVectorClock(result.getStableTimeStamp());
@@ -221,14 +219,13 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		this.state.getObserved().update(replicaId, this.state.getLastestVectorClock());
 		
 		Set<PureOpBaseEvent<O>> pruned = this.state.getUnstables().stream()
-				.filter(e->!crdt.Obsoletes(e.getOperation(), submit.getOperation())).collect(Collectors.toSet());
+				.filter(e->!crdt.Obsoletes(e, operation)).collect(Collectors.toSet());
 		
 		pruned.add(operation);
 		
 		this.state.setUnstables(pruned);
 		
-		submit.getReplyTo().tell(new Protocal.Res<Q>(this.crdt.Query(this.state.getStable(), pruned
-				.stream().map(e->e.getOperation()).collect(Collectors.toSet()))));
+		submit.getReplyTo().tell(new Protocal.Res<Q>(this.crdt.Query(this.state.getStable(), pruned)));
 		
 		return Behaviors.same();
 	}

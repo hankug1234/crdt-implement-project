@@ -42,19 +42,20 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		public Set<PureOpBaseEvent<O>> unStableOperations;
 	}
 	
-	public PureReplicator(ActorContext<PureOpBaseProtocal> context ,StashBuffer<PureOpBaseProtocal> buffer, PureCrdtOperation<S,Q,O> crdt
-			,String replicaId,PureReplicationState<S,O> state, Duration timeoutInterval) {
+	public PureReplicator(ActorContext<PureOpBaseProtocal> context ,StashBuffer<PureOpBaseProtocal> buffer, PureCrdtOperation<S,Q,O> crdt,
+			TimerScheduler<PureOpBaseProtocal> timer,String replicaId,PureReplicationState<S,O> state, Duration timeoutInterval) {
 		super(context);
 		this.timeoutInterval = timeoutInterval;
 		this.state = state;
 		this.replicaId = replicaId;
 		this.buffer = buffer;
 		this.crdt = crdt;
+		this.timer = timer;
 	}
 
 	public static <S,Q,O> Behavior<PureOpBaseProtocal> create(PureCrdtOperation<S,Q,O> crdt,String replicaId, PureReplicationState<S,O> state, Duration timeoutInterval){
 		return Behaviors.withStash(100, stash ->{
-			return Behaviors.setup(ctx-> new PureReplicator<S,Q,O>(ctx,stash,crdt,replicaId,state,timeoutInterval));
+			return Behaviors.setup(ctx-> Behaviors.withTimers(timer -> new PureReplicator<S,Q,O>(ctx,stash,crdt,timer,replicaId,state,timeoutInterval)) );
 		});
 	}
 	
@@ -103,6 +104,9 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 	}
 	
 	private Behavior<PureOpBaseProtocal> onConnect(Protocal.Connect connect){
+		
+		getContext().getLog().info("get connect protocal to {}",connect.getReplicaId());
+		
 		PureReplicationStatus status = this.state.getConnections().get(connect.getReplicaId());
 		Object timerKey;
 		if(status == null) {
@@ -145,7 +149,7 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		return Behaviors.same();
 	}
 	
-	private Behavior<PureOpBaseProtocal> onRest(Protocal.Reset<S,O> reset){
+	private Behavior<PureOpBaseProtocal> onReset(Protocal.Reset<S,O> reset){
 		
 		getContext().getLog().info("get reset protocal from {}",reset.getFrom());
 		
@@ -208,12 +212,15 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 	private Behavior<PureOpBaseProtocal> onReplicateTimeout(Protocal.ReplicateTimeout timeout){
 		getContext().getLog().info("{} timeout",timeout.getReplicaId());
 		PureReplicationStatus status = this.state.getConnections().get(timeout.getReplicaId());
-		status.getEndPoint().getEndPoint().tell(new Protocal.Replicate(replicaId,new EndPoint(getContext().getSelf()), this.state.getLastestVectorClock()));
+		status.getEndPoint().getEndPoint().tell(new Protocal.Replicate(timeout.getReplicaId(),new EndPoint(getContext().getSelf()), this.state.getLastestVectorClock()));
 		
 		return Behaviors.same();
 	}
 	
 	private Behavior<PureOpBaseProtocal> onSubmit(Protocal.Submit<O> submit){
+		
+		getContext().getLog().info("{} : operation submitted ",replicaId);
+		
 		this.state.getLastestVectorClock().inc(replicaId);
 		PureOpBaseEvent<O> operation = new PureOpBaseEvent<>(this.replicaId,this.state.getLastestVectorClock().clone(),submit.getOperation());
 		this.state.getObserved().update(replicaId, this.state.getLastestVectorClock());
@@ -233,6 +240,13 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 	private Behavior<PureOpBaseProtocal> onEvict(Protocal.Evict evict){
 		
 		getContext().getLog().info("evict {}",evict.getReplicaId());
+		
+		if(evict.getReplicaId().equals(replicaId)) {
+			return Behaviors.stopped();
+		}else if(!this.state.getConnections().keySet().contains(evict.getReplicaId())) {
+			getContext().getLog().info("no search replicaId {}",evict.getReplicaId());
+			return Behaviors.same();
+		}
 		
 		this.state.getLastestVectorClock().inc(replicaId);
 		this.evictedBroadCast(evict.getReplicaId(), this.state.getLastestVectorClock());
@@ -260,31 +274,26 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		return Behaviors.same();
 	}
 	
-	private Behavior<PureOpBaseProtocal> timerSettingActive(PureOpBaseProtocal protocal){
-		return Behaviors.withTimers(timer -> {
-			return active(protocal,timer);
-		});
+	private Behavior<PureOpBaseProtocal> onError(Object o){
+		getContext().getLog().info("{} : error occure",replicaId);
+		return Behaviors.stopped();
 	}
 	
-	private Behavior<PureOpBaseProtocal> active(PureOpBaseProtocal protocal, TimerScheduler<PureOpBaseProtocal> timer){
-		this.timer = timer;
-		return Behaviors
-				.receive(PureOpBaseProtocal.class)
-				.onMessage(Protocal.Query.class, this::onQuery)
-				.onMessage(Protocal.Connect.class, this::onConnect)
-				.onMessage(Protocal.Replicate.class, this::onReplicate)
-				.onMessage(Protocal.Replicated.class, this::onReplicated)
-				.onMessage(Protocal.ReplicateTimeout.class, this::onReplicateTimeout)
-				.onMessage(Protocal.Submit.class, this::onSubmit)
-				.onMessage(Protocal.Evict.class, this::onEvict)
-				.onMessage(Protocal.Evicted.class, this::onEvicted)
-				.onAnyMessage(e -> Behaviors.stopped()).build();
-	}
 	
 	@Override
 	public Receive<PureOpBaseProtocal> createReceive() {
 		// TODO Auto-generated method stub
-		return newReceiveBuilder().onMessage(PureOpBaseProtocal.class, this::timerSettingActive).build();
+		return newReceiveBuilder()
+				.onMessage(Protocal.Connect.class, this::onConnect)
+				.onMessage(Protocal.Query.class, this::onQuery)
+				.onMessage(Protocal.Replicate.class, this::onReplicate)
+				.onMessage(Protocal.Replicated.class, this::onReplicated)
+				.onMessage(Protocal.ReplicateTimeout.class, this::onReplicateTimeout)
+				.onMessage(Protocal.Reset.class, this::onReset)
+				.onMessage(Protocal.Submit.class, this::onSubmit)
+				.onMessage(Protocal.Evict.class, this::onEvict)
+				.onMessage(Protocal.Evicted.class, this::onEvicted)
+				.onAnyMessage(this::onError).build();
 	}
 	
 	

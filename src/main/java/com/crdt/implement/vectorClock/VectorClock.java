@@ -1,11 +1,13 @@
 package com.crdt.implement.vectorClock;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 public class VectorClock implements Comparable<VectorClock> {
 	private Map<String,Long> vectorClock;
@@ -62,6 +64,12 @@ public class VectorClock implements Comparable<VectorClock> {
 			String replicaId = e.getKey(); Long logicalTime = e.getValue();
 			this.vectorClock.merge(replicaId, Long.valueOf(logicalTime), (a,b)->Long.min(a,b));
 		});
+	}
+	
+	@Override
+	public String toString() {
+		return this.vectorClock.entrySet().stream()
+		.sorted(Comparator.comparing((Map.Entry<String,Long> e)->{return e.getKey();})).map(e->e.getKey()+" : "+e.getValue()+" ").collect(Collectors.joining());
 	}
 	
 	@Override

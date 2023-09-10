@@ -60,16 +60,21 @@ public class VectorClock implements Comparable<VectorClock> {
 	}
 	
 	public void intersaction(VectorClock otherVectorClock) {
-		otherVectorClock.getLogicalTimes().stream().forEach((Entry<String,Long> e) ->{
-			String replicaId = e.getKey(); Long logicalTime = e.getValue();
-			this.vectorClock.merge(replicaId, Long.valueOf(logicalTime), (a,b)->Long.min(a,b));
-		});
+		Set<String> replicaIds = new HashSet<>();
+		replicaIds.addAll(otherVectorClock.getReplicaIds());
+		replicaIds.addAll(this.getReplicaIds());
+		
+		for(String id : replicaIds) {
+			long a = otherVectorClock.getLogicalTime(id);
+			long b = this.getLogicalTime(id);
+			this.vectorClock.put(id, Long.min(a,b));
+		}
 	}
 	
 	@Override
 	public String toString() {
 		return this.vectorClock.entrySet().stream()
-		.sorted(Comparator.comparing((Map.Entry<String,Long> e)->{return e.getKey();})).map(e->e.getKey()+" : "+e.getValue()+" ").collect(Collectors.joining());
+		.sorted(Comparator.comparing((Map.Entry<String,Long> e)->{return e.getKey();})).map(e->e.getKey()+" : "+e.getValue().toString()+" ").collect(Collectors.joining());
 	}
 	
 	@Override

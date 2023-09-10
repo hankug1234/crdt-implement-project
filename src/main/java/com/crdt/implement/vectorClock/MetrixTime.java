@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class MetrixTime {
 	Map<String,VectorClock> metrixTime;
@@ -33,9 +34,26 @@ public class MetrixTime {
 	}
 	
 	public VectorClock min() {
-		VectorClock foldedMetrix = new VectorClock();
-		this.metrixTime.entrySet().stream().forEach(e->foldedMetrix.intersaction(e.getValue()));
-		return foldedMetrix;
+		Set<String> keys = this.metrixTime.keySet();
+		
+		if(keys.isEmpty()) {
+			return new VectorClock();
+		}else {
+			try {
+				String key = keys.iterator().next();
+				VectorClock foldedMetrix = this.metrixTime.get(key).clone();
+				this.metrixTime.entrySet().stream().forEach(e->foldedMetrix.intersaction(e.getValue()));
+				return foldedMetrix;
+				
+			}catch(Exception e) {
+				return new VectorClock();
+			}
+		}
+	}
+	
+	@Override
+	public String toString() {
+		return this.metrixTime.entrySet().stream().map(e->e.getKey()+" = "+e.getValue().toString()+" | ").collect(Collectors.joining());
 	}
 	
 	public VectorClock max() {

@@ -67,7 +67,9 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 	
 	private StablelizeResult stableize() {
 		VectorClock stableTimeStamp = this.state.getObserved().min();
-		getContext().getLog().info("{} : stableTimeStamp {}",replicaId,stableTimeStamp.toString());
+		
+		getContext().getLog().info("{} : {} ",replicaId,this.state.getObserved().toString());
+		getContext().getLog().info("{} :observed size {} stableTimeStamp {}",replicaId,this.state.getObserved().getVectorClocks().size(),stableTimeStamp.toString());
 		Map<Boolean,List<PureOpBaseEvent<O>>> partition = this.state.getUnstables()
 				.stream().collect(Collectors.partitioningBy(e -> e.getVectorClock().compareTo(stableTimeStamp) > Ord.Eq.getValue()));
 		
@@ -123,6 +125,8 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		
 		getContext().getLog().info("get connect protocal connect {} -> {}",this.replicaId,connect.getReplicaId());
 		
+		this.state.getObserved().update(connect.getReplicaId(),new VectorClock());
+		
 		this.timer.startTimerAtFixedRate(timerKey,new Protocal.ReplicateTimeout(connect.getReplicaId()),this.timeoutInterval);
 		
 		return Behaviors.same();
@@ -130,17 +134,21 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 	
 	private Behavior<PureOpBaseProtocal> onReplicate(Protocal.Replicate replicate){
 		
+		
 		final VectorClock evicted = state.getEvicted().getVectorClock(replicate.getReplicaId());
+		final int compareResult = replicate.getVectorClock().compareTo(this.state.getStableVectorClock());
+		this.state.getObserved().update(replicate.getReplicaId(), replicate.getVectorClock());
+		
 		// if require operations at some node evicted time then requiring node ins't know that node evicted so send evicted protocal 
 		if(evicted.compareTo(replicate.getVectorClock()) == Ord.Cc.getValue()) {
 			getContext().getLog().info("{} : get evicted node protocal from {}",replicaId,replicate.getReplicaId());
 			this.evictedBroadCast(replicate.getReplicaId(), evicted);
 			return Behaviors.same();
-		}else if(replicate.getVectorClock().compareTo(this.state.getStableVectorClock()) == Ord.Lt.getValue()) {
+		}else if(compareResult == Ord.Lt.getValue()) {
 			getContext().getLog().info("{} : send reset protocal to {}", replicaId,replicate.getReplicaId());
+			
 			replicate.getReplyTo().getEndPoint().tell(new Protocal.Reset<>(this.replicaId, this.toSnapshot()));
 		}
-		
 		
 		Set<PureOpBaseEvent<O>> filteredOperations = this.state.getUnstables().stream()
 		.filter(e -> e.getVectorClock().compareTo(replicate.getVectorClock()) > Ord.Eq.getValue()).collect(Collectors.toSet());
@@ -157,8 +165,9 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		getContext().getLog().info("{} : get reset protocal from {}",replicaId,reset.getFrom());
 		
 		PureReplicationState<S,O> resetState = reset.getSnapshot();
+		final int compareResult = this.state.getLastestVectorClock().compareTo(resetState.getStableVectorClock());
 		
-		if(this.state.getLastestVectorClock().compareTo(resetState.getStableVectorClock()) == Ord.Lt.getValue()) {
+		if(compareResult == Ord.Lt.getValue()) {
 			getContext().getLog().info("{} : process reset protocal ",this.replicaId);
 			this.state.setStable(resetState.getStable());
 			this.state.setStableVectorClock(resetState.getStableVectorClock());
@@ -179,6 +188,18 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 				,replicaId,replicated.getFrom(),replicated.getOperations().size(),this.state.getLastestVectorClock().toString());
 		
 		if(replicated.getOperations().isEmpty()) {
+			
+			StablelizeResult result = this.stableize();
+			
+			if(!result.getStableOperations().isEmpty()) {
+				getContext().getLog().info("{} : save stable state , stable op size {} : ",replicaId,result.getStableOperations().size());
+				S newStable = this.crdt.Apply(this.state.getStable(),result.getStableOperations());
+				
+				this.state.setStable(newStable);
+				this.state.setStableVectorClock(result.getStableTimeStamp());
+				this.state.setUnstables(result.getUnStableOperations());
+			}
+			
 			this.refreshTimeout(replicated.getFrom());
 		}
 		else {
@@ -191,6 +212,7 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 			
 			for(PureOpBaseEvent<O> e1 : unstables) {
 				this.state.getObserved().update(replicated.getFrom(), e1.getVectorClock());
+				
 				Set<PureOpBaseEvent<O>> pruned = this.state.getUnstables().stream()
 						.filter(e2 -> !this.crdt.Obsoletes(e1, e2)).collect(Collectors.toSet());
 				pruned.add(e1);
@@ -198,6 +220,8 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 				state.setUnstables(pruned);
 				state.getLastestVectorClock().merge(e1.getVectorClock());
 			}
+			
+			state.getObserved().update(replicaId, state.getLastestVectorClock());
 			
 			StablelizeResult result = this.stableize();
 			
@@ -230,6 +254,7 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 		getContext().getLog().info("{} : operation submitted on {}",replicaId,this.state.getLastestVectorClock().toString());
 		
 		PureOpBaseEvent<O> operation = new PureOpBaseEvent<>(this.replicaId,this.state.getLastestVectorClock().clone(),submit.getOperation());
+		
 		this.state.getObserved().update(replicaId, this.state.getLastestVectorClock());
 		
 		Set<PureOpBaseEvent<O>> pruned = this.state.getUnstables().stream()

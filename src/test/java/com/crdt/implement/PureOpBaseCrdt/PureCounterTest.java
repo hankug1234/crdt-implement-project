@@ -35,13 +35,21 @@ class PureCounterTest {
 			
 			b.inc(1L);
 			
-			Thread.sleep(1000);
+			Thread.sleep(2000);
 			
 			assertSame(a.query(),3L);
 			assertSame(c.query(),3L);
 			assertSame(b.query(),3L);
 			
+			c.inc(1L);
+			b.inc(1L);
+			a.inc(1L);
+		
+			Thread.sleep(5000);
 			
+			assertSame(a.query(),6L);
+			assertSame(c.query(),6L);
+			assertSame(b.query(),6L);
 			
 		}catch(Exception e) {
 			assertTrue(false);

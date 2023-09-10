@@ -3,8 +3,8 @@ package com.crdt.implement.vectorClock;
 public enum Ord {
 	Lt(-1),
 	Eq(0),
-	Gt(1),
-	Cc(2);
+	Gt(2),
+	Cc(1);
 	
 	private final int value;
 	

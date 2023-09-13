@@ -23,4 +23,9 @@ public class Data {
 		}
 		
 	}
+	
+	
+	public static class OutofBound<A> implements LSeqData<A>{
+		
+	}
 }

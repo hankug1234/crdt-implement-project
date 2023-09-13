@@ -55,15 +55,15 @@ public class LSeq<A> {
 	
 	public List<A> removeAt(int index) throws InterruptedException, ExecutionException, TimeoutException{
 		CompletionStage<OpBaseResponse> stage = AskPattern
-				.ask(system, replay-> new Protocal.Command<LSeqCommand>(new Command.RemoveAt<A>(index), replay), Duration.ofSeconds(3), system.scheduler());
+				.ask(system, replay-> new Protocal.Command<LSeqCommand>(new Command.RemoveAt<A>(index,replicaId), replay), Duration.ofSeconds(3), system.scheduler());
 		
 		Protocal.Res<List<A>> result = (Protocal.Res<List<A>>) stage.toCompletableFuture().get(1L, TimeUnit.SECONDS);
 		
 		return result.getRes();
 	}
 	
-	public void connect(Counter counter) {
-		system.tell(new Protocal.Connect(counter.getReplicaId(),new EndPoint(counter.getSystem())));
+	public void connect(LSeq<A>  lseq) {
+		system.tell(new Protocal.Connect(lseq.getReplicaId(),new EndPoint(lseq.getSystem())));
 	}
 	
 	

@@ -16,10 +16,10 @@ public class Command {
 	
 	@Getter
 	public static class RemoveAt<A> implements LSeqCommand<A>{
-		private int index;
+		private int index; private String replicaId;
 		
-		public RemoveAt(int index) {
-			this.index = index;
+		public RemoveAt(int index,String replicaId) {
+			this.index = index; this.replicaId = replicaId;
 		}
 	}
 	

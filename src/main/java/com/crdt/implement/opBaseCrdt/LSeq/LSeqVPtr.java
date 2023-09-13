@@ -51,6 +51,6 @@ public class LSeqVPtr implements Comparable<LSeqVPtr>{
 	
 	@Override 
 	public String toString() {
-		return String.join(".", sequence.stream().map(b->(char)b.byteValue()).toArray(null)) + ":" + replicaId;
+		return  sequence.stream().map(b->b.toString()).collect(Collectors.joining("/")) +":" + replicaId;
 	}
 }

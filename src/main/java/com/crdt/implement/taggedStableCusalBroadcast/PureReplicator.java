@@ -328,6 +328,8 @@ public class PureReplicator<S,Q,O> extends AbstractBehavior<PureOpBaseProtocal>{
 	}
 	
 	
+	
+	
 	@Override
 	public Receive<PureOpBaseProtocal> createReceive() {
 		// TODO Auto-generated method stub

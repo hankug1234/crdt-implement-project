@@ -1,4 +1,6 @@
-package com.crdt.implement.opBaseCrdt;
+package com.crdt.implement.opBaseCrdt.counter;
+
+import com.crdt.implement.opBaseCrdt.OpBaseCrdtOperation;
 
 public class OpBaseCounterOperation implements OpBaseCrdtOperation<Long,Long,Long,Long>{
 	public Long Default() {

@@ -5,6 +5,6 @@ public interface OpBaseCrdtOperation<S,Q,C,E> {
 	public S Default();
 	public Q Query(S crdt);
 	public E Prepare(S crdt, C command);
-	public S Effect(S crdt, E evnet);
+	public S Effect(S crdt, E event);
 	public S copy(S crdt);
 }

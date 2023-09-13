@@ -1,4 +1,4 @@
-package com.crdt.implement.opBaseCrdt;
+package com.crdt.implement.opBaseCrdt.counter;
 
 import java.time.Duration;
 import java.util.concurrent.CompletionStage;
@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.crdt.implement.opBaseCrdt.OpBaseCrdtOperation;
 import com.crdt.implement.persistence.OpBaseCrdtDB;
 import com.crdt.implement.reliableBroadcast.EndPoint;
 import com.crdt.implement.reliableBroadcast.OpBaseProtocal;
@@ -26,9 +27,9 @@ public class Counter {
 	private ActorSystem<OpBaseProtocal> system;
 	private String replicaId;
 	
-	public Counter(String replicaId,OpBaseCrdtDB<Long,Long> db) {
+	public Counter(String replicaId,OpBaseCrdtDB<Long,Long> db,Duration timeInterval) {
 		this.replicaId = replicaId;
-		this.system = ActorSystem.create(Replicator.create(db, replicaId, new OpBaseCounterOperation()),replicaId);
+		this.system = ActorSystem.create(Replicator.create(db, replicaId, new OpBaseCounterOperation(),timeInterval),replicaId);
 	}
 	
 	public Long inc(long num) throws InterruptedException, ExecutionException, TimeoutException {

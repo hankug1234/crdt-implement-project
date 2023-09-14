@@ -25,8 +25,9 @@ import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.actor.typed.javadsl.StashBuffer;
 import akka.actor.typed.javadsl.TimerScheduler;
+import lombok.extern.slf4j.Slf4j;
 
-
+@Slf4j
 public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 	
 	private final StashBuffer<OpBaseProtocal> buffer;
@@ -101,6 +102,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 					if(cause == null) {
 						return new Protocal.Loaded<S>(value);
 					}else {
+						log.info(cause.getMessage());
 						return new Protocal.Stop();
 					}
 				});

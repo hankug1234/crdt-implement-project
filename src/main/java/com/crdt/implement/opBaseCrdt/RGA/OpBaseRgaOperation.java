@@ -16,7 +16,7 @@ public class OpBaseRgaOperation<A> implements OpBaseCrdtOperation<RgaState<A>,Li
 	@Override
 	public RgaState<A> Default() {
 		// TODO Auto-generated method stub
-		return new RgaState<>(this.replicaId);
+		return new RgaState<A>(this.replicaId);
 	}
 
 	@Override
@@ -67,21 +67,26 @@ public class OpBaseRgaOperation<A> implements OpBaseCrdtOperation<RgaState<A>,Li
 		
 		RgaVPtr newSequencer = new RgaVPtr(sequencer.getReplicaId(),sequencer.getIndex());
 		List<Vertex<A>> newState = new ArrayList<>();
-		for(Vertex v : state) {
+		for(Vertex<A> v : state) {
 			newState.add(v.clone());
 		}
 		
-		return new RgaState(newState,newSequencer);
+		return new RgaState<A>(newState,newSequencer);
 	}
 	
 	//tombstone 들을 포함한 실제 데이터의 index // 세그먼 테이션 활용 하면 더 빠르게 가능 -> 차후 수정 할 것 
 	public static <A> int indexWithTombstones(int index, List<Vertex<A>> crdt) {
 		int offset = 1;
-		while(index > 0) {
+		
+		while(offset < crdt.size()) {
 			if(crdt.get(offset).isTumbstone()) {
 				offset+=1;
 			}else {
-				offset+=1; index-=1;
+				index-=1;
+				if(index < 0) {
+					return offset;
+				}
+				offset+=1;
 			}
 		}
 		return offset;
@@ -96,7 +101,7 @@ public class OpBaseRgaOperation<A> implements OpBaseCrdtOperation<RgaState<A>,Li
 		return offset;
 	}
 	
-	// offset 위치의 데이터가 내 포인터 보다 작으면 해당 위치에 삽입 아니면 한칸 미룸 
+	// offset 위치의 데이터가 내 포인터 보다 작으면 해당 위치에 삽입 아니면 한칸 미룸
 	public static <A> int shift(int offset,RgaVPtr vptr ,List<Vertex<A>> crdt) {
 		while(offset < crdt.size()){
 			RgaVPtr next = crdt.get(offset).getVptr();
@@ -132,7 +137,7 @@ public class OpBaseRgaOperation<A> implements OpBaseCrdtOperation<RgaState<A>,Li
 		int predecessorIndex = indexOfVPtr(predecessor,crdt); // 내가 삭입한 시전에서 바로 왼쪽 포인터 인덱스 획득
 		int insertIndex = shift(predecessorIndex+1,vptr,crdt); // 바로 왼쪽 포인터 부터 내가 오른쪽 포인터 보다 클 때 까지 오른쪽 으로 이동 
 		RgaVPtr nextSequnecer = new RgaVPtr(sequencer.getReplicaId(),Integer.max(sequencer.getIndex(),vptr.getIndex()));
-		crdt.add(insertIndex,new Vertex(vptr,value));
+		crdt.add(insertIndex,new Vertex<>(vptr,value));
 		rga.setSequencer(nextSequnecer);
 		return rga;
 		

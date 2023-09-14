@@ -16,22 +16,22 @@ public class Vertex<A> {
 	
 	public Vertex(RgaVPtr vptr) {
 		this.vptr = vptr;
-		this.value = Optional.of(null);
+		this.value = Optional.empty();
 	}
 	
 	public Vertex<A> clone(){
 		if(value.isPresent()) {
-			return new Vertex(this.vptr,Optional.of(this.value.get()));
+			return new Vertex<A>(this.vptr,this.value.get());
 		}else {
-			return new Vertex(this.vptr);
+			return new Vertex<A>(this.vptr);
 		}
 	}
 	
 	public void setTumbstone() {
-		this.value = Optional.of(null);
+		this.value = Optional.empty();
 	}
 	
 	public boolean isTumbstone() {
-		return this.value.isPresent();
+		return !this.value.isPresent();
 	}
 }

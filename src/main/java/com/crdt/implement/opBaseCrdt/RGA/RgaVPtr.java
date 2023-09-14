@@ -13,9 +13,10 @@ public class RgaVPtr {
 	}
 	
 	public int compareTo(RgaVPtr other) {
-		int cmp = Integer.compare(this.index, other.getIndex());
+		int cmp = Integer.compare(this.index, other.getIndex()); 
 		if(cmp == 0) {
-			cmp = this.replicaId.compareTo(other.getReplicaId());
+			cmp = other.getReplicaId().compareTo(this.replicaId);
+			
 		}
 		return cmp;
 	}

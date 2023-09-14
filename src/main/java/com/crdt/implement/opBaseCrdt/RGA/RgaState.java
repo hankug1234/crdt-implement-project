@@ -20,7 +20,7 @@ public class RgaState<A> {
 	public RgaState(String replicaId) {
 		this.state = new ArrayList<>();
 		this.sequencer = new RgaVPtr(replicaId,0);
-		this.state.add(new Vertex(sequencer));
+		this.state.add(new Vertex<>(new RgaVPtr("s",0)));
 	}
 
 }

@@ -2,10 +2,11 @@ package com.crdt.implement.opBaseCrdt.BwRGA;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.crdt.implement.opBaseCrdt.OpBaseCrdtOperation;
 
-public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A>,List<A>,BwRgaCommand<A>,BwRgaData<A>>{
+public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A>,List<Block<A>>,BwRgaCommand<A>,BwRgaData<A>>{
 
 	private String replicaId;
 	
@@ -13,35 +14,55 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 		this.replicaId = replicaId;
 	}
 	
-	
 	@Override
 	public BwRgaState<A> Default() {
 		// TODO Auto-generated method stub
-		return null;
+		return new BwRgaState<A>(this.replicaId);
 	}
 
 	@Override
-	public List<A> Query(BwRgaState<A> crdt) {
+	public List<Block<A>> Query(BwRgaState<A> crdt) {
 		// TODO Auto-generated method stub
-		return null;
+		return crdt.getBlocks().stream().filter(b->!b.isTombstone()).collect(Collectors.toList());
 	}
 
 	@Override
 	public BwRgaData<A> Prepare(BwRgaState<A> crdt, BwRgaCommand<A> command) {
 		// TODO Auto-generated method stub
-		return null;
+		if(command instanceof Command.Insert) {
+			Command.Insert<A> insert = (Command.Insert<A>) command;
+			return createInserted(insert.getIndex(),insert.getValues(),crdt);
+			
+		}else {
+			Command.RemoveAt<A> removeAt = (Command.RemoveAt<A>) command;
+			return createRemoved(removeAt.getIndex(),removeAt.getCount(),crdt.getBlocks());
+		}
 	}
 
 	@Override
 	public BwRgaState<A> Effect(BwRgaState<A> crdt, BwRgaData<A> event) {
 		// TODO Auto-generated method stub
-		return null;
+		
+		BwRgaState<A> result = null;
+		
+		if(event instanceof Data.Inserted) {
+			
+			Data.Inserted<A> inserted = (Data.Inserted<A>) event;
+			result = applyInserted(inserted.getAfter(), inserted.getAt(), inserted.getValues(), crdt);
+			
+		}else {
+			
+			Data.Removed<A> removed = (Data.Removed<A>) event;
+			result = applyRemoved(removed.getRemoveds(), crdt);
+		}
+		
+		return result;
 	}
 
 	@Override
 	public BwRgaState<A> copy(BwRgaState<A> crdt) {
 		// TODO Auto-generated method stub
-		return null;
+		return crdt.clone();
 	}
 	
 	//주어진 인덱스 번호가 실제 데이터 블록 상에서 {indexnum,inner offset} 을 반환 

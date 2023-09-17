@@ -3,9 +3,10 @@ package com.crdt.implement.opBaseCrdt.BwRGA;
 import java.util.List;
 import java.util.Optional;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-
+@AllArgsConstructor
 public class Content<A> {
 	private int size;
 	private Optional<List<A>> content;
@@ -18,6 +19,10 @@ public class Content<A> {
 	public Content(int size) {
 		this.content = Optional.empty();
 		this.size = size;
+	}
+	
+	public Content<A> clone(){
+		return new Content<A>(size,content);
 	}
 	
 	public List<A> getContent(){

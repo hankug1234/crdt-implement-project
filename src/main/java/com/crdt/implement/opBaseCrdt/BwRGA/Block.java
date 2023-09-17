@@ -21,6 +21,10 @@ public class Block<A> {
 		return this.content.isTombstone();
 	}
 	
+	public Block<A> clone(){
+		return new Block<>(vptrOff,content.clone());
+	}
+	
 	public boolean containOffset(int offset) {
 		return this.vptrOff.getOffset() + this.content.length() >= offset;
 	}

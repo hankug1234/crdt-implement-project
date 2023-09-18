@@ -12,10 +12,15 @@ public class BwRgaVPtr {
 		this.replicaId = replicaId;
 	}
 	
+	@Override
+	public String toString() {
+		return "id : "+replicaId+", sequence : "+index;
+	}
+	
 	public int compareTo(BwRgaVPtr other) {
 		int cmp = Integer.compare(this.index, other.getIndex());
 		if(cmp == 0) {
-			return this.replicaId.compareTo(other.getReplicaId());
+			return other.getReplicaId().compareTo(this.replicaId);
 		}
 		return cmp;
 	}

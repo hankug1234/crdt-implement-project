@@ -26,12 +26,12 @@ public class Block<A> {
 	}
 	
 	public boolean containOffset(int offset) {
-		return this.vptrOff.getOffset() + this.content.length() >= offset;
+		return (this.vptrOff.getOffset() + this.content.length()) >= offset && offset >= this.vptrOff.getOffset();
 	}
 	
 	public Block<A>[] split(int position){
 		
-		if(position > this.length()) {
+		if(position >= this.length()) {
 			return new Block[] {this,null};
 		}
 		

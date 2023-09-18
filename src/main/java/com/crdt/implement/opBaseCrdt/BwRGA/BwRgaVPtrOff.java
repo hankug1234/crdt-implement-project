@@ -15,4 +15,9 @@ public class BwRgaVPtrOff {
 		}
 		return false;
 	}
+	
+	@Override
+	public String toString() {
+		return vptr.toString()+", offset : "+offset;
+	}
 }

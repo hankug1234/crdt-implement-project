@@ -2,18 +2,15 @@ package com.crdt.implement.opBaseCrdt.BwRGA;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.crdt.implement.opBaseCrdt.OpBaseCrdtOperation;
 
-import lombok.extern.slf4j.Slf4j;
-@Slf4j
-public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A>,List<Block<A>>,BwRgaCommand<A>,BwRgaData<A>>{
+public class OpBaseImprovedBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A>,List<Block<A>>,BwRgaCommand<A>,BwRgaData<A>>{
 
 	private String replicaId;
 	
-	public OpBaseBwRgaOperation(String replicaId) {
+	public OpBaseImprovedBwRgaOperation(String replicaId) {
 		this.replicaId = replicaId;
 	}
 	
@@ -123,13 +120,7 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 		int idx = indexAndOffset[0]; int offset = indexAndOffset[1];
 		List<Data.RemovedRange> removeds = new ArrayList<>();
 		for(int i=idx; i<blocks.size(); i++) {
-			
 			Block<A> block = blocks.get(i);
-			
-			if(block.isTombstone()) {
-				continue;
-			}
-			
 			BwRgaVPtrOff vptrOff = block.getVptrOff();
 			BwRgaVPtrOff newOff = new BwRgaVPtrOff(vptrOff.getVptr(),vptrOff.getOffset() + offset);
 			int len = block.length() - offset;
@@ -137,24 +128,21 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 			// 지워야 하는 블록이 범위 내에 있는지 평가 
 			if(len > count) {
 				removeds.add(new Data.RemovedRange(newOff, count));
-				return new Data.Removed<>(removeds);
+				break;
 			}else if(len == 0) {
 				offset = 0;
-			}
-			else {
+			}else {
 				removeds.add(new Data.RemovedRange(newOff, len));
-				count-=len; offset = 0;
+				count-=len;
 			}
 			
 		}
-		
 		return new Data.Removed<>(removeds);
 	}
 	
 	
 	
 	public static <A> BwRgaState<A> applyRemoved(List<Data.RemovedRange> removeds, BwRgaState<A> rga){
-		
 		if(removeds.isEmpty()) {
 			return rga;
 		}else {
@@ -169,6 +157,7 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 					Block<A> block = blocks.get(index);
 					if(block.getVptrOff().getVptr().equals(vptrOff.getVptr())) {
 						if(block.containOffset(vptrOff.getOffset())) {
+							
 							int splitIndex = vptrOff.getOffset() - block.getVptrOff().getOffset();
 							
 							Block<A> tombstone;
@@ -186,12 +175,10 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 							}else {
 								
 								if(length <= tombstone.length()) {
-									Block<A>[] split = block.split(length);
-									
-									split[0].setTombstone();
+									Block<A>[] split = block.split(splitIndex);
 									newBlocks.add(split[0]);
-									
 									if(split[1] != null) {
+										split[1].setTombstone();
 										newBlocks.add(split[1]);
 									}
 									index+=1; length = 0;
@@ -216,12 +203,6 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 					
 				}
 			}
-			
-			
-			for(int i=index; i<blocks.size(); i++) {
-				newBlocks.add(blocks.get(i));
-			}
-			
 			return new BwRgaState<A>(rga.getSequencer(),newBlocks);
 		}
 	}
@@ -232,20 +213,18 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 		BwRgaVPtrOff vptrOff = rga.getBlocks().get(indexAndOffset[0]).getVptrOff();
 		BwRgaVPtr at = nextSeqNr(rga.getSequencer());
 		BwRgaVPtrOff after = new BwRgaVPtrOff(vptrOff.getVptr(),indexAndOffset[1] + vptrOff.getOffset()); 
-		log.info("after : "+after.toString()+", value : "+values.toString());
 		return new Data.Inserted<>(after,at, values);
 		
 	}
 	
 	public static <A> BwRgaState<A> applyInserted(BwRgaVPtrOff predecessor, BwRgaVPtr at, List<A> values, BwRgaState<A> rga){
 		int[] indexAndBlockIndex = findByPositionOffset(predecessor,rga.getBlocks());
+		int indexAdjust = shift(indexAndBlockIndex[0]+1,at,rga.getBlocks());
 		Block<A> block = rga.getBlocks().get(indexAndBlockIndex[0]);
 		Block<A> newBlock = new Block<A>(new BwRgaVPtrOff(at,0),new Content<A>(values));
 		Block<A>[] split = block.split(indexAndBlockIndex[1]);
 		rga.getBlocks().remove(indexAndBlockIndex[0]);
 		rga.getBlocks().add(indexAndBlockIndex[0], split[0]);
-		
-		int indexAdjust = shift(indexAndBlockIndex[0]+1,at,rga.getBlocks());
 		rga.getBlocks().add(indexAdjust, newBlock);
 		
 		if(split[1] != null) {

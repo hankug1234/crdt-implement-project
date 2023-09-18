@@ -15,7 +15,7 @@ public class BwRgaState<A> {
 	public BwRgaState(String replicaId) {
 		this.sequencer = new BwRgaVPtr(0,replicaId);
 		this.blocks = new ArrayList<>();
-		this.blocks.add(new Block<>(new BwRgaVPtrOff(this.sequencer,0),new Content<A>(0)));
+		this.blocks.add(new Block<>(new BwRgaVPtrOff(new BwRgaVPtr(0,"start"),0),new Content<A>(0)));
 	}
 	
 	public BwRgaState<A> clone(){

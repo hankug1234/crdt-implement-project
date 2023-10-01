@@ -1,5 +1,5 @@
 package com.crdt.implement.opBaseCrdt.document.values;
 
-public class Null {
+public class Null extends LeafVal{
 
 }

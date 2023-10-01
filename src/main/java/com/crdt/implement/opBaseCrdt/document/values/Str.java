@@ -1,5 +1,5 @@
 package com.crdt.implement.opBaseCrdt.document.values;
 
-public class Str {
+public class Str extends LeafVal{
 
 }

@@ -1,5 +1,6 @@
 package com.crdt.implement.opBaseCrdt.document;
 
+import com.crdt.implement.opBaseCrdt.document.keyType.HeadK;
 import com.crdt.implement.vectorClock.VectorClock;
 
 import lombok.AllArgsConstructor;
@@ -18,5 +19,22 @@ public class Id {
 			cmp = other.getReplicaId().compareTo(this.replicaId);
 		}
 		return cmp;
+	}
+	
+	@Override
+	public int hashCode() {
+		return 0;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if(o instanceof Id) {
+			Id id = (Id) o;
+			if(id.compareTo(this) == 0) {
+				return true;
+			}
+			return false;
+		}
+		return false;
 	}
 }

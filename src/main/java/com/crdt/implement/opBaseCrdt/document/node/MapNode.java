@@ -1,13 +1,22 @@
 package com.crdt.implement.opBaseCrdt.document.node;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.crdt.implement.opBaseCrdt.document.Id;
+import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
+import com.crdt.implement.opBaseCrdt.document.cursor.View;
+import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes;
+import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes.Leaf;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
+import com.crdt.implement.opBaseCrdt.document.list.ListRef;
+import com.crdt.implement.opBaseCrdt.document.list.RefTypes;
+import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes;
 import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 
 public class MapNode extends BranchNode{
@@ -32,5 +41,32 @@ public class MapNode extends BranchNode{
 	
 	public BranchNode cloneWithPresentSets(Map<Key,Set<Id>> presentSets) {
 		return new MapNode(this.getChildren(),presentSets);
+	}
+	
+	@Override
+	public Optional<Set<Id>> clear(Id opId, Key key) {
+		TypeTag tag = new TagTypes.MapT(key);
+		Optional<Node> child = this.findChild(tag);
+		if(this.findChild(tag).isPresent()) {
+			MapNode node = (MapNode) child.get();
+			return node.clearMap(opId, new RefTypes.HeadR());
+		}
+		return Optional.empty();
+	}
+	
+	public Optional<Set<Id>> clearMap(Id opId, ListRef ref){
+		Set<String> keys = keySet();
+		if(keys.isEmpty()) {
+			return Optional.empty();
+		}
+		
+		Set<Id> result = new HashSet<>();
+		for(String key : keys) {
+			Optional<Set<Id>> pres = clearElem(opId,new StringK(key));
+			if(pres.isPresent()) {
+				result.addAll(pres.get());
+			}
+		}
+		return Optional.of(result);
 	}
 }

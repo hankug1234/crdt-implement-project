@@ -9,6 +9,8 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import com.crdt.implement.opBaseCrdt.document.keyType.HeadK;
+
 public class VectorClock implements Comparable<VectorClock> {
 	private Map<String,Long> vectorClock;
 	
@@ -97,4 +99,20 @@ public class VectorClock implements Comparable<VectorClock> {
 		}).getValue();
 	}
 	
+	@Override
+	public int hashCode() {
+		return 0;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if(o instanceof VectorClock) {
+			VectorClock clock = (VectorClock) o;
+			if(clock.compareTo(this) == 0) {
+				return true;
+			}
+			return false;
+		}
+		return false;
+	}
 }

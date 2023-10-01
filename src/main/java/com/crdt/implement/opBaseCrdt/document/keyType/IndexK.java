@@ -1,12 +1,14 @@
 package com.crdt.implement.opBaseCrdt.document.keyType;
 
+import com.crdt.implement.opBaseCrdt.document.Id;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
 public class IndexK implements Key{
-	private int index;
+	private Id index;
 	
 	@Override
 	public int hashCode() {

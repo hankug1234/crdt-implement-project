@@ -1,5 +1,6 @@
 package com.crdt.implement.opBaseCrdt.document.list;
 
+import com.crdt.implement.opBaseCrdt.document.Id;
 import com.crdt.implement.opBaseCrdt.document.keyType.HeadK;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
@@ -34,7 +35,11 @@ public class RefTypes {
 	@AllArgsConstructor
 	@Getter
 	public static class IndexR implements ListRef{
-		private int index;
+		private Id index;
+		
+		public IndexR clone() {
+			return new IndexR(this.index);
+		}
 		
 		@Override
 		public int hashCode() {
@@ -45,7 +50,7 @@ public class RefTypes {
 		public boolean equals(Object o) {
 			if(o instanceof IndexR) {
 				IndexR i = (IndexR) o;
-				if(i.getIndex() == this.index) {
+				if(i.getIndex().compareTo(this.index) == 0) {
 					return true;
 				}
 				
@@ -68,6 +73,10 @@ public class RefTypes {
 			}
 			return false;
 		}
+		
+		public HeadR clone() {
+			return new HeadR();
+		}
 	}
 	
 	public static class TailR implements ListRef{
@@ -82,6 +91,10 @@ public class RefTypes {
 				return true;
 			}
 			return false;
+		}
+		
+		public TailR clone() {
+			return new TailR();
 		}
 	}
 }

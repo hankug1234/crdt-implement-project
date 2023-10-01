@@ -1,5 +1,7 @@
 package com.crdt.implement.opBaseCrdt.document.typetag;
 
-public interface TypeTag {
+import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 
+public interface TypeTag {
+	public Key getKey();
 }

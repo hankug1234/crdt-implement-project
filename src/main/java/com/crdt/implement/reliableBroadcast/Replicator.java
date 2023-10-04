@@ -88,7 +88,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 					return events.thenCompose((List<OpBaseEvent<E>> list) -> {
 						return CompletableFuture.supplyAsync(()->{
 							for(OpBaseEvent<E> event : list) {
-								state.setCrdt(crdt.Effect(state.getCrdt(), event.getData()));
+								state.setCrdt(crdt.Effect(state.getCrdt(), event));
 								state.setSeqNr(event.getLocalSeqNr());
 								state.getVectorClock().merge(event.getVectorClock());
 								state.getObserved().merge(event.getOriginReplicaId(),event.getOriginSeqNr(),(a,b)->Long.max(a,b));
@@ -176,7 +176,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 					
 					saveBuffers.add(newEvent);
 					
-					crdtState = this.crdt.Effect(crdtState, event.getData());
+					crdtState = this.crdt.Effect(crdtState, event);
 				}
 			}
 			
@@ -212,7 +212,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 		E data = this.crdt.Prepare(this.state.getCrdt(), command.getCommand());
 		OpBaseEvent<E> event = new OpBaseEvent<>(this.replicaId, this.state.getSeqNr(), this.state.getSeqNr(), this.state.getVectorClock().clone(), data);
 		
-		this.state.setCrdt(this.crdt.Effect(this.state.getCrdt(), data));
+		this.state.setCrdt(this.crdt.Effect(this.state.getCrdt(), event));
 		
 		db.SaveEvents(List.of(event));
 		

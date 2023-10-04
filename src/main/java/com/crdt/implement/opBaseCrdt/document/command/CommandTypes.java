@@ -34,7 +34,7 @@ public class CommandTypes {
 	@AllArgsConstructor
 	@Getter
 	public static class Delete implements Command{
-		
+		private Expr expr;
 	}
 	
 	@AllArgsConstructor

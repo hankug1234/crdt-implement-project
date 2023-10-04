@@ -44,17 +44,15 @@ public class MapNode extends BranchNode{
 	}
 	
 	@Override
-	public Optional<Set<Id>> clear(Id opId, Key key) {
-		TypeTag tag = new TagTypes.MapT(key);
-		Optional<Node> child = this.findChild(tag);
-		if(this.findChild(tag).isPresent()) {
-			MapNode node = (MapNode) child.get();
-			return node.clearMap(opId, new RefTypes.HeadR());
+	public Optional<Set<Id>> clear(Id opId) {
+		Optional<Set<Id>> result =  clearMap(opId);
+		if(result.isPresent()) {
+			return result;
 		}
 		return Optional.empty();
 	}
 	
-	public Optional<Set<Id>> clearMap(Id opId, ListRef ref){
+	public Optional<Set<Id>> clearMap(Id opId){
 		Set<String> keys = keySet();
 		if(keys.isEmpty()) {
 			return Optional.empty();

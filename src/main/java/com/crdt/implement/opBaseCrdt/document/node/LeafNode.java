@@ -63,4 +63,8 @@ public class LeafNode implements Node{
 		return Optional.empty();
 	}
 	
+	@Override
+	public Node clone() {
+		return null;
+	}
 }

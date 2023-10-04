@@ -13,4 +13,7 @@ public class Operation {
 	private Cursor cur;
 	private Signal signal;
 
+	public void setId(Id id) {
+		this.id = id;
+	}
 }

@@ -6,6 +6,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.crdt.implement.opBaseCrdt.OpBaseCrdtOperation;
+import com.crdt.implement.reliableBroadcast.OpBaseEvent;
 
 import lombok.extern.slf4j.Slf4j;
 @Slf4j
@@ -43,19 +44,20 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 	}
 
 	@Override
-	public BwRgaState<A> Effect(BwRgaState<A> crdt, BwRgaData<A> event) {
+	public BwRgaState<A> Effect(BwRgaState<A> crdt, OpBaseEvent<BwRgaData<A>> event) {
 		// TODO Auto-generated method stub
 		
 		BwRgaState<A> result = null;
+		BwRgaData<A> data = event.getData();
 		
-		if(event instanceof Data.Inserted) {
+		if(data instanceof Data.Inserted) {
 			
-			Data.Inserted<A> inserted = (Data.Inserted<A>) event;
+			Data.Inserted<A> inserted = (Data.Inserted<A>) data;
 			result = applyInserted(inserted.getAfter(), inserted.getAt(), inserted.getValues(), crdt);
 			
 		}else {
 			
-			Data.Removed<A> removed = (Data.Removed<A>) event;
+			Data.Removed<A> removed = (Data.Removed<A>) data;
 			result = applyRemoved(removed.getRemoveds(), crdt);
 		}
 		

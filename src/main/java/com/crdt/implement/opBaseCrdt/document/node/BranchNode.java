@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collector;
 
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
@@ -13,10 +14,12 @@ import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
 import com.crdt.implement.opBaseCrdt.document.list.ListRef;
 import com.crdt.implement.opBaseCrdt.document.list.RefTypes;
 import com.crdt.implement.opBaseCrdt.document.list.RefTypes.IndexR;
+import com.crdt.implement.opBaseCrdt.document.signal.LocationInstructor;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes.AssignS;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes.InsertS;
+import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes.MoveS;
 import com.crdt.implement.opBaseCrdt.document.Id;
 import com.crdt.implement.opBaseCrdt.document.Operation;
 import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
@@ -25,12 +28,16 @@ import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes;
 import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes.Branch;
 import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes.Leaf;
 import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes;
+import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes.ListT;
+import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes.MapT;
+import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes.RegT;
 import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 import com.crdt.implement.opBaseCrdt.document.values.BranchVal;
 import com.crdt.implement.opBaseCrdt.document.values.EmptyMap;
 import com.crdt.implement.opBaseCrdt.document.values.LeafVal;
 import com.crdt.implement.opBaseCrdt.document.values.Val;
 import com.crdt.implement.vectorClock.Ord;
+import com.crdt.implement.vectorClock.VectorClock;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -77,15 +84,39 @@ public class BranchNode implements Node{
 	}
 	
 	public Optional<Set<Id>> clearElem(Id opId, Key key){
-		Optional<Set<Id>> pres = clear(opId,key);
+		Optional<Set<Id>> pres = clearAny(opId,key);
 		if(pres.isPresent()) {
 			this.presentSets.put(key, pres.get());
 		}
 		return pres;
 	}
+	
+	public Optional<Set<Id>> clearAny(Id opId, Key key){
+		TypeTag tag = new MapT(key);
+		Optional<Node> node = this.findChild(tag);
+		if(node.isPresent()) {
+			return node.get().clear(opId); 
+		}
+		
+		tag = new ListT(key);
+		node = this.findChild(tag);
+		if(node.isPresent()) {
+			return node.get().clear(opId); 
+		}
+		
+		
+		tag = new RegT(key);
+		node = this.findChild(tag);
+		if(node.isPresent()) {
+			return node.get().clear(opId); 
+		}
+		
+		return Optional.empty();
+	}
+	
 
 	@Override
-	public Optional<Set<Id>> clear(Id opId, Key key) {
+	public Optional<Set<Id>> clear(Id opId) {
 		// TODO Auto-generated method stub
 		return Optional.empty();
 	}
@@ -160,10 +191,63 @@ public class BranchNode implements Node{
 		return Optional.empty();
 	}
 
+	public List<Operation> concurrentOpsSince(VectorClock vectorClock,List<Operation> ops){
+		return ops.stream().filter((Operation op) -> {
+			
+			Key key = op.getCur().getFinalKey();
+			
+			if(op.getId().getVectorClock().compareTo(vectorClock) >= Ord.Eq.getValue() 
+				&& !(op.getSignal() instanceof SignalTypes.AssignS)
+				&& (findChild(new RegT(key)).isPresent() || findChild(new MapT(key)).isPresent() || findChild(new ListT(key)).isPresent())) {
+				return true;
+			}
+			return false;}
+			).toList();
+	}
+	
 	@Override
-	public Optional<Node> applyOp(Operation op, List<Operation> concurrentOps) {
-		// TODO Auto-generated method stub
-		return Optional.empty();
+	public Optional<Node> applyOp(Operation op, List<Operation> ops) {
+		View view = op.getCur().view();
+		if(view instanceof ViewTypes.Leaf) {
+			ViewTypes.Leaf leaf = (Leaf) view;
+			if(this instanceof ListNode) {
+				List<Operation> concurrentOps = concurrentOpsSince(op.getId().getVectorClock(),ops);
+				boolean moveOps = concurrentOps.stream().anyMatch(o->o.getSignal() instanceof SignalTypes.MoveS);
+				if(!concurrentOps.isEmpty() && moveOps) {
+					
+					ListNode node = (ListNode) this;
+					List<Map.Entry<Id, Map<ListRef,ListRef>>> newOrders =  node.getOrderArchive().entrySet().stream()
+					.filter(e->e.getKey().compareTo(op.getId()) >= Ord.Eq.getValue()).toList();
+					
+					if(!newOrders.isEmpty()) {
+						Id min = newOrders.get(0).getKey();
+						for(Map.Entry<Id, Map<ListRef,ListRef>> e : newOrders) {
+							Id n = e.getKey();
+							int cmp = min.getVectorClock().compareTo(n.getVectorClock()); 
+							if( cmp >= Ord.Gt.getValue()) {
+								min = n;
+							}else if(cmp >= Ord.Eq.getValue() && min.getReplicaId().compareTo(n.getReplicaId()) > 0){
+								min = n;
+							}
+						}
+						
+						
+						return Optional.of()
+					}
+					
+				}
+				
+			}
+			return Optional.of(applyAtLeaf(op));
+		}else {
+			ViewTypes.Branch branch = (Branch) view;
+			Optional<Node> result = applyOp(new Operation(op.getId(),branch.getTail(),op.getSignal()),ops);
+			
+			addId(branch.getHead(),op.getId(),op.getSignal());
+			
+			return result;
+			
+		}
 	}
 
 	@Override
@@ -192,14 +276,21 @@ public class BranchNode implements Node{
 	public Node saveOrder(Operation op){
 		if(this instanceof ListNode) {
 			ListNode node = (ListNode) this;
-			if(node.getOrderArchive().get(op.getId().getVectorClock()).isEmpty()) {
+			if(node.getOrderArchive().get(op.getId()).isEmpty()) {
 				Map<ListRef,ListRef> saveOrder = new HashMap<>();
 				for(Map.Entry<ListRef,ListRef> e : node.getOrder().entrySet()) {
 					saveOrder.put(e.getKey().clone(), e.getValue().clone());
 				}
-				node.getOrderArchive().put(op.getId().getVectorClock(), saveOrder);
+				node.getOrderArchive().put(op.getId(), saveOrder);
 			}
 			
+		}
+		return this;
+	}
+	
+	public Node applyMany(List<Operation> ops) {
+		for(Operation op : ops) {
+			applyAtLeaf(op);
 		}
 		return this;
 	}
@@ -220,7 +311,7 @@ public class BranchNode implements Node{
 				TypeTag tag = new TagTypes.RegT(key);
 				clear(op.getId(),key);
 				this.addId(tag, op.getId(), signal);
-				RegNode reg = (RegNode) this.children.get(key);
+				RegNode reg = (RegNode) this.children.get(tag);
 				LeafVal leafVal = (LeafVal) value;
 				reg.setRegValue(op.getId(),leafVal);
 			}
@@ -255,14 +346,46 @@ public class BranchNode implements Node{
 			}
 			
 		}else if(signal instanceof SignalTypes.MoveS) {
+			SignalTypes.MoveS moveS = (MoveS) signal;
+			LocationInstructor location = moveS.getLocation();
+			Cursor targetCursor = moveS.getTarget();
 			
+			ListRef srcNodeRef = RefTypes.keyToR(op.getCur().getFinalKey());
+			Optional<ListRef> srcNextNodeRef = getNextRef(srcNodeRef);
 			
+			ListRef targetNodeRef = RefTypes.keyToR(targetCursor.getFinalKey());
+			Optional<ListRef> targetNextNodeRef = getNextRef(targetNodeRef);
 			
+			if( srcNextNodeRef.isPresent() && targetNextNodeRef.isPresent() &&
+				!(location == LocationInstructor.Before && srcNextNodeRef.get().equals(targetNodeRef)) &&
+				!(location == LocationInstructor.After && targetNextNodeRef.get().equals(srcNodeRef)) &&
+				!this.findChild(new TagTypes.RegT(targetCursor.getFinalKey())).isEmpty()) {
+				
+				saveOrder(op);
+				setNextRef(getPreviousRef(srcNodeRef).get(),srcNextNodeRef.get());
+				
+				if(location == LocationInstructor.Before) {
+					
+					setNextRef(getPreviousRef(targetNodeRef).get(),srcNodeRef);
+					setNextRef(srcNodeRef,targetNodeRef);
+					
+				}else {
+					
+					setNextRef(targetNodeRef,srcNodeRef);
+					setNextRef(srcNodeRef,targetNextNodeRef.get());
+					
+				}
+			}
 		}else {
 			throw new RuntimeException();
 		}
 		
 		return this;
+	}
+	
+	@Override
+	public Node clone() {
+		return null;
 	}
 	
 }

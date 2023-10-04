@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.crdt.implement.opBaseCrdt.OpBaseCrdtOperation;
+import com.crdt.implement.reliableBroadcast.OpBaseEvent;
 
 public class OpBaseRgaOperation<A> implements OpBaseCrdtOperation<RgaState<A>,List<A>,RgaCommand<A>,RgaData<A>>{
 	
@@ -41,10 +42,12 @@ public class OpBaseRgaOperation<A> implements OpBaseCrdtOperation<RgaState<A>,Li
 	}
 
 	@Override
-	public RgaState<A> Effect(RgaState<A> crdt, RgaData<A> event) {
+	public RgaState<A> Effect(RgaState<A> crdt, OpBaseEvent<RgaData<A>> event) {
 		
-		if(event instanceof Data.Inserted<A>) {
-			Data.Inserted<A> inserted = (Data.Inserted<A>) event;
+		RgaData<A> data = event.getData();
+		
+		if(data instanceof Data.Inserted<A>) {
+			Data.Inserted<A> inserted = (Data.Inserted<A>) data;
 			RgaVPtr predecessor = inserted.getAfter();
 			RgaVPtr at = inserted.getAt();
 			A value = inserted.getValue();
@@ -52,7 +55,7 @@ public class OpBaseRgaOperation<A> implements OpBaseCrdtOperation<RgaState<A>,Li
 			return applyInserted(predecessor,at,value,crdt);
 		}else {
 			
-			Data.Removed<A> removed = (Data.Removed<A>) event;
+			Data.Removed<A> removed = (Data.Removed<A>) data;
 			RgaVPtr at = removed.getAt();
 			
 			return applyRemoved(at,crdt);

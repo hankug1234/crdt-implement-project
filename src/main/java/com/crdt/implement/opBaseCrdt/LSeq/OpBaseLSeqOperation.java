@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.crdt.implement.opBaseCrdt.OpBaseCrdtOperation;
+import com.crdt.implement.reliableBroadcast.OpBaseEvent;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -63,16 +64,18 @@ public class OpBaseLSeqOperation<A> implements OpBaseCrdtOperation<List<Vertex<A
 	}
 
 	@Override
-	public List<Vertex<A>> Effect(List<Vertex<A>> crdt, LSeqData<A> event) {
+	public List<Vertex<A>> Effect(List<Vertex<A>> crdt, OpBaseEvent<LSeqData<A>> event) {
 		// TODO Auto-generated method stub
 		
-		if( event instanceof Data.Inserted) {
-			Data.Inserted<A> inserted = (Data.Inserted<A>) event;
+		LSeqData<A> data = event.getData();
+		
+		if( data instanceof Data.Inserted) {
+			Data.Inserted<A> inserted = (Data.Inserted<A>) data;
 			LSeqVPtr vptr = inserted.getVptr(); A value = inserted.getValue();
 			int index = binarySearch(crdt,vptr);
 			crdt.add(index,new Vertex(vptr,value));
-		}else if(event instanceof Data.Removed){
-			Data.Removed<A> removed = (Data.Removed<A>) event;
+		}else if(data instanceof Data.Removed){
+			Data.Removed<A> removed = (Data.Removed<A>) data;
 			LSeqVPtr vptr = removed.getVptr();
 			int index = binarySearch(crdt,vptr);
 			crdt.remove(index);

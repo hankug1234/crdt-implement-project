@@ -15,8 +15,6 @@ import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 
 import lombok.Getter;
 
-
-
 @Getter
 public class ListNode extends BranchNode{
 	

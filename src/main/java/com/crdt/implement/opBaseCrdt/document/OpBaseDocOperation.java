@@ -14,10 +14,9 @@ import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
 import com.crdt.implement.opBaseCrdt.document.expression.Expr;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Doc;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Get;
-import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Iter;
-import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Next;
+import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Index;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Var;
-import com.crdt.implement.opBaseCrdt.document.keyType.HeadK;
+import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
 import com.crdt.implement.opBaseCrdt.document.node.BranchNode;
@@ -68,12 +67,12 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 					}else if(cmd instanceof CommandTypes.Insert) {
 						
 						CommandTypes.Insert insert = (CommandTypes.Insert) cmd;
-						op = makeOp(evalExpr(crdt,insert.getExpr()),new SignalTypes.InsertS(insert.getValue()));
+						op = makeOp(evalExpr(crdt,insert.getExpr()),new SignalTypes.InsertS(insert.getValue(),insert.getIndex()));
 						
 					}else if(cmd instanceof CommandTypes.Move) {
 						
 						CommandTypes.Move move = (CommandTypes.Move) cmd;
-						op = makeOp(evalExpr(crdt,move.getSrc()),new SignalTypes.MoveS(evalExpr(crdt,move.getTar()),move.getLocation()));
+						op = makeOp(evalExpr(crdt,move.getSrc()),new SignalTypes.MoveS(evalExpr(crdt,move.getTar())));
 						
 					}else if(cmd instanceof CommandTypes.Let) {
 						CommandTypes.Let let = (CommandTypes.Let) cmd;
@@ -99,7 +98,7 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 		
 		for(Operation op : data) {
 			op.setId(new Id(replicaId,vectorClock));
-			node.applyOp(op, null);
+			node.applyOp(op);
 		}
 		
 		return crdt;
@@ -110,37 +109,42 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 	}
 	
 	private Cursor go(Document crdt, Expr expr, List<Function<Cursor,Cursor>> fs) {
-		Function<Cursor,Cursor> f; Expr nextExpr;
+		
 		if(expr instanceof Doc) {
+			Doc doc = (Doc) expr;
+			go(crdt,doc.getExpr(),fs);
 			return applyAllLeft(fs,Cursor.doc());
 		}else if (expr instanceof Var) {
 			Var var = (Var) expr;
+			
+			go(crdt,var.getExpr(),fs);
+			
 			if(crdt.getVariables().containsKey(var)) {
 				return applyAllLeft(fs,crdt.getVariables().get(var));
 			}else {
 				return applyAllLeft(fs,Cursor.doc());
 			}
+			
 		}else if(expr instanceof Get) {
-			Get get = (Get) expr; nextExpr = get.getExpr();
-			f = (Cursor c) -> {
-				Key key = c.getFinalKey();
-				if(key instanceof HeadK) {
-					return c;
-				}
+			Get get = (Get) expr; Expr nextExpr = get.getExpr();
+			Function<Cursor,Cursor> f = (Cursor c) -> {
 				c.append((Key k) -> new MapT(k) , new StringK(get.getKey()));
 				return c;
 			};
-			
-			
-		}else if(expr instanceof Iter) {
-			Iter iter = (Iter) expr; nextExpr = iter.getExpr();
-			f = (Cursor c) -> {c.append((Key k) -> new ListT(k) , new HeadK()); return c; };
+			fs.add(f);
+			return go(crdt,nextExpr,fs);
+		}else if(expr instanceof Index) {
+			Index index = (Index) expr; Expr nextExpr = index.getExpr();
+			Function<Cursor,Cursor> f = (Cursor c) -> {
+				c.append((Key k) -> new ListT(k) , new IndexK(index.getIndex(),index.getReplicaId()));
+				return c;
+			};
+			fs.add(f);
+			return go(crdt,nextExpr,fs);
 		}else {
-			Next next = (Next) expr; nextExpr = next.getExpr();
-			f = (Cursor c) -> crdt.getDocument().next(c).get();
+			return null;
 		}
-		fs.add(f);
-		return go(crdt,nextExpr,fs);
+		
 	}
 	
 	private Cursor evalExpr(Document crdt,Expr expr) {

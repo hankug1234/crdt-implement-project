@@ -11,9 +11,6 @@ import java.util.stream.Collector;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
-import com.crdt.implement.opBaseCrdt.document.list.ListRef;
-import com.crdt.implement.opBaseCrdt.document.list.RefTypes;
-import com.crdt.implement.opBaseCrdt.document.list.RefTypes.IndexR;
 import com.crdt.implement.opBaseCrdt.document.signal.LocationInstructor;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes;
@@ -92,26 +89,40 @@ public class BranchNode implements Node{
 	}
 	
 	public Optional<Set<Id>> clearAny(Id opId, Key key){
+		Set<Id> result = new HashSet<>();
 		TypeTag tag = new MapT(key);
 		Optional<Node> node = this.findChild(tag);
 		if(node.isPresent()) {
-			return node.get().clear(opId); 
+			Optional<Set<Id>> result1 =  node.get().clear(opId);
+			if(result1.isPresent()) {
+				result.addAll(result1.get());
+			}
 		}
 		
 		tag = new ListT(key);
 		node = this.findChild(tag);
 		if(node.isPresent()) {
-			return node.get().clear(opId); 
+			Optional<Set<Id>> result2 =  node.get().clear(opId); 
+			if(result2.isPresent()) {
+				result.addAll(result2.get());
+			}
 		}
 		
 		
 		tag = new RegT(key);
 		node = this.findChild(tag);
 		if(node.isPresent()) {
-			return node.get().clear(opId); 
+			Optional<Set<Id>> result3 =  node.get().clear(opId);
+			if(result3.isPresent()) {
+				result.addAll(result3.get());
+			}
 		}
 		
-		return Optional.empty();
+		if(result.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(result);
+	
 	}
 	
 
@@ -136,33 +147,7 @@ public class BranchNode implements Node{
 			}
 		}
 	}
-	
-	public Optional<ListNode> setNextRef(ListRef src, ListRef target) {
-		if(this instanceof ListNode) {
-			ListNode node = (ListNode) this;
-			node.getOrder().put(src, target);
-			return Optional.of(node);
-		}
-		return Optional.empty();
-	}
-	
-	public Optional<ListRef> getPreviousRef(ListRef ref) {
-		if(this instanceof ListNode) {
-			ListNode node = (ListNode) this;
-			return Optional.of(node.getInverseOrder().getOrDefault(ref, new RefTypes.HeadR()));
-		}
-		return Optional.empty();
-	}
-	
-	public Optional<ListRef> getNextRef(ListRef ref) {
-		if(this instanceof ListNode) {
-			ListNode node = (ListNode) this;
-			return Optional.of(node.getOrder().getOrDefault(ref, new RefTypes.TailR()));
-		}
-		return Optional.empty();
-	}
 
-	@Override
 	public Optional<Set<String>> keys(Cursor cur) {
 		Optional<View> view = this.getLeafView(cur);
 		if(view.isPresent() && view.get() instanceof ViewTypes.Leaf) {
@@ -177,7 +162,7 @@ public class BranchNode implements Node{
 		return Optional.empty();
 	}
 
-	@Override
+	
 	public Optional<List<LeafVal>> values(Cursor cur) {
 		Optional<View> view = this.getLeafView(cur);
 		if(view.isPresent() && view.get() instanceof ViewTypes.Leaf) {
@@ -185,114 +170,24 @@ public class BranchNode implements Node{
 			Optional<Node> node = findChild(new TagTypes.RegT(leaf.getFinalKey()));
 			if(node.isPresent()) {
 				RegNode reg = (RegNode) node.get();
-				return reg.values(cur);
+				return Optional.of(reg.getValues());
 			}
 		}
 		return Optional.empty();
 	}
 
-	public List<Operation> concurrentOpsSince(VectorClock vectorClock,List<Operation> ops){
-		return ops.stream().filter((Operation op) -> {
-			
-			Key key = op.getCur().getFinalKey();
-			
-			if(op.getId().getVectorClock().compareTo(vectorClock) >= Ord.Eq.getValue() 
-				&& !(op.getSignal() instanceof SignalTypes.AssignS)
-				&& (findChild(new RegT(key)).isPresent() || findChild(new MapT(key)).isPresent() || findChild(new ListT(key)).isPresent())) {
-				return true;
-			}
-			return false;}
-			).toList();
-	}
 	
 	@Override
-	public Optional<Node> applyOp(Operation op, List<Operation> ops) {
+	public Optional<Node> applyOp(Operation op) {
 		View view = op.getCur().view();
 		if(view instanceof ViewTypes.Leaf) {
-			ViewTypes.Leaf leaf = (Leaf) view;
-			if(this instanceof ListNode) {
-				List<Operation> concurrentOps = concurrentOpsSince(op.getId().getVectorClock(),ops);
-				boolean moveOps = concurrentOps.stream().anyMatch(o->o.getSignal() instanceof SignalTypes.MoveS);
-				if(!concurrentOps.isEmpty() && moveOps) {
-					
-					ListNode node = (ListNode) this;
-					List<Map.Entry<Id, Map<ListRef,ListRef>>> newOrders =  node.getOrderArchive().entrySet().stream()
-					.filter(e->e.getKey().compareTo(op.getId()) >= Ord.Eq.getValue()).toList();
-					
-					if(!newOrders.isEmpty()) {
-						Id min = newOrders.get(0).getKey();
-						for(Map.Entry<Id, Map<ListRef,ListRef>> e : newOrders) {
-							Id n = e.getKey();
-							int cmp = min.getVectorClock().compareTo(n.getVectorClock()); 
-							if( cmp >= Ord.Gt.getValue()) {
-								min = n;
-							}else if(cmp >= Ord.Eq.getValue() && min.getReplicaId().compareTo(n.getReplicaId()) > 0){
-								min = n;
-							}
-						}
-						
-						
-						return Optional.of()
-					}
-					
-				}
-				
-			}
 			return Optional.of(applyAtLeaf(op));
 		}else {
 			ViewTypes.Branch branch = (Branch) view;
-			Optional<Node> result = applyOp(new Operation(op.getId(),branch.getTail(),op.getSignal()),ops);
-			
+			Optional<Node> result = applyOp(new Operation(op.getId(),branch.getTail(),op.getSignal()));
 			addId(branch.getHead(),op.getId(),op.getSignal());
-			
 			return result;
-			
 		}
-	}
-
-	@Override
-	public Optional<Cursor> next(Cursor cur) {
-		Optional<View> view = this.getLeafView(cur);
-		if(view.isPresent() && view.get() instanceof ViewTypes.Leaf) {
-			ViewTypes.Leaf leaf = (Leaf) view.get();
-			Optional<ListRef> next = getNextRef(RefTypes.keyToR(leaf.getFinalKey()));
-			
-			while(next.isPresent() && !(next.get() instanceof RefTypes.TailR)) {
-				
-				RefTypes.IndexR indexR = (IndexR) next.get();
-				Key key = RefTypes.RtoKey(indexR);
-				
-				if(!this.getPres(key).isEmpty()) {
-					Cursor newCur = new Cursor(key);
-					return Optional.of(newCur);
-				}
-				
-				next = getNextRef(RefTypes.keyToR(leaf.getFinalKey()));
-			}
-		}
-		return Optional.empty();
-	}
-	
-	public Node saveOrder(Operation op){
-		if(this instanceof ListNode) {
-			ListNode node = (ListNode) this;
-			if(node.getOrderArchive().get(op.getId()).isEmpty()) {
-				Map<ListRef,ListRef> saveOrder = new HashMap<>();
-				for(Map.Entry<ListRef,ListRef> e : node.getOrder().entrySet()) {
-					saveOrder.put(e.getKey().clone(), e.getValue().clone());
-				}
-				node.getOrderArchive().put(op.getId(), saveOrder);
-			}
-			
-		}
-		return this;
-	}
-	
-	public Node applyMany(List<Operation> ops) {
-		for(Operation op : ops) {
-			applyAtLeaf(op);
-		}
-		return this;
 	}
 	
 	public Node applyAtLeaf(Operation op) {
@@ -309,7 +204,7 @@ public class BranchNode implements Node{
 				this.children.put(tag, getChild(tag));
 			}else {
 				TypeTag tag = new TagTypes.RegT(key);
-				clear(op.getId(),key);
+				clear(op.getId());
 				this.addId(tag, op.getId(), signal);
 				RegNode reg = (RegNode) this.children.get(tag);
 				LeafVal leafVal = (LeafVal) value;
@@ -317,65 +212,27 @@ public class BranchNode implements Node{
 			}
 			
 		}else if(signal instanceof SignalTypes.DeleteS) {
-			saveOrder(op);
 			clearElem(op.getId(),key);
 		}else if(signal instanceof SignalTypes.InsertS) {
-			ListRef prevRef = RefTypes.keyToR(key);
-			Optional<ListRef> nextRef = this.getNextRef(prevRef);
-			SignalTypes.InsertS insertS = (InsertS) signal;
-			
-			if(nextRef.isPresent()) {
-				ListRef ref = nextRef.get();
-				
-				while(ref instanceof IndexR) {
-					IndexR indexR = (IndexR) ref;
-					if(op.getId().compareTo(indexR.getIndex()) >= Ord.Eq.getValue()) {
-						break;
-					}
-					nextRef = this.getNextRef(ref);
-					prevRef = ref;
-					ref = nextRef.get();
-				}
-				
-				IndexR indexR = new IndexR(op.getId());
-				applyAtLeaf(new Operation(op.getId(),new Cursor(new IndexK(op.getId())),new SignalTypes.AssignS(insertS.getValue())));
-				
-				saveOrder(op);
-				setNextRef(prevRef,indexR);
-				setNextRef(indexR,ref);
+			if(this instanceof ListNode) {
+				SignalTypes.InsertS insert = (InsertS) signal;
+				ListNode node = (ListNode) this;
+				IndexK index = (IndexK) key;
+				node.getOrder().insert(insert.getIndex(), index);
+				applyAtLeaf(new Operation(op.getId(),new Cursor(index),new SignalTypes.AssignS(insert.getValue())));
 			}
+			
 			
 		}else if(signal instanceof SignalTypes.MoveS) {
-			SignalTypes.MoveS moveS = (MoveS) signal;
-			LocationInstructor location = moveS.getLocation();
-			Cursor targetCursor = moveS.getTarget();
 			
-			ListRef srcNodeRef = RefTypes.keyToR(op.getCur().getFinalKey());
-			Optional<ListRef> srcNextNodeRef = getNextRef(srcNodeRef);
-			
-			ListRef targetNodeRef = RefTypes.keyToR(targetCursor.getFinalKey());
-			Optional<ListRef> targetNextNodeRef = getNextRef(targetNodeRef);
-			
-			if( srcNextNodeRef.isPresent() && targetNextNodeRef.isPresent() &&
-				!(location == LocationInstructor.Before && srcNextNodeRef.get().equals(targetNodeRef)) &&
-				!(location == LocationInstructor.After && targetNextNodeRef.get().equals(srcNodeRef)) &&
-				!this.findChild(new TagTypes.RegT(targetCursor.getFinalKey())).isEmpty()) {
-				
-				saveOrder(op);
-				setNextRef(getPreviousRef(srcNodeRef).get(),srcNextNodeRef.get());
-				
-				if(location == LocationInstructor.Before) {
-					
-					setNextRef(getPreviousRef(targetNodeRef).get(),srcNodeRef);
-					setNextRef(srcNodeRef,targetNodeRef);
-					
-				}else {
-					
-					setNextRef(targetNodeRef,srcNodeRef);
-					setNextRef(srcNodeRef,targetNextNodeRef.get());
-					
-				}
+			if(this instanceof ListNode) {
+				SignalTypes.MoveS moveS = (MoveS) signal;
+				Cursor targetCursor = moveS.getTarget();
+				ListNode node = (ListNode) this;
+				IndexK src = (IndexK) key; IndexK target = (IndexK) targetCursor.getFinalKey();
+				node.getOrder().moveByKey(src, target);
 			}
+			
 		}else {
 			throw new RuntimeException();
 		}

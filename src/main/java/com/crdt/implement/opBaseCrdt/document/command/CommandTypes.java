@@ -29,6 +29,7 @@ public class CommandTypes {
 	public static class Insert implements Command{
 		private Expr expr;
 		private Val value;
+		private int index;
 	}
 	
 	@AllArgsConstructor
@@ -42,7 +43,6 @@ public class CommandTypes {
 	public static class Move implements Command{
 		private Expr src;
 		private Expr tar;
-		private LocationInstructor location;
 	}
 	
 	@AllArgsConstructor

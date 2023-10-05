@@ -18,6 +18,7 @@ public class SignalTypes {
 	@Getter
 	public static class InsertS implements Signal{
 		private Val value;
+		private int index;
 	}
 	
 	public static class DeleteS implements Signal{
@@ -28,6 +29,5 @@ public class SignalTypes {
 	@Getter
 	public static class MoveS implements Signal{
 		private Cursor target;
-		private LocationInstructor location;
 	}
 }

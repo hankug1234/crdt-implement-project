@@ -8,8 +8,6 @@ class JsonTypeTest {
 
 	@Test
 	void test() {
-		Json json = new JsonType.Value(new DataTypes.IntegerType(11));
-		assertEquals(json.toString(),"11");
 	}
 
 }

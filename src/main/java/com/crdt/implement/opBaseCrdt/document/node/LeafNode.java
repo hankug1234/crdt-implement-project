@@ -30,7 +30,7 @@ public class LeafNode implements Node{
 	}
 	
 	@Override
-	public Optional<Set<Id>> clear(Id opId, Key key) {
+	public Optional<Set<Id>> clear(Id opId) {
 		// TODO Auto-generated method stub
 		Map<Id,LeafVal> concurrent = values.entrySet().stream()
 				.filter(e->e.getKey().getVectorClock().compareTo(opId.getVectorClock())>=Ord.Eq.getValue())
@@ -40,25 +40,7 @@ public class LeafNode implements Node{
 	}
 
 	@Override
-	public Optional<Set<String>> keys(Cursor cur) {
-		// TODO Auto-generated method stub
-		return Optional.empty();
-	}
-
-	@Override
-	public Optional<List<LeafVal>> values(Cursor cur) {
-		// TODO Auto-generated method stub
-		return Optional.of(this.getValues());
-	}
-
-	@Override
-	public Optional<Node> applyOp(Operation op, List<Operation> concurrentOps) {
-		// TODO Auto-generated method stub
-		return Optional.empty();
-	}
-
-	@Override
-	public Optional<Cursor> next(Cursor cur) {
+	public Optional<Node> applyOp(Operation op) {
 		// TODO Auto-generated method stub
 		return Optional.empty();
 	}

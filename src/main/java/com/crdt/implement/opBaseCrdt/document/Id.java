@@ -1,6 +1,4 @@
 package com.crdt.implement.opBaseCrdt.document;
-
-import com.crdt.implement.opBaseCrdt.document.keyType.HeadK;
 import com.crdt.implement.vectorClock.Ord;
 import com.crdt.implement.vectorClock.VectorClock;
 

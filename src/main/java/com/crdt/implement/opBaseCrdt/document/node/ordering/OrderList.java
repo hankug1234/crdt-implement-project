@@ -143,14 +143,30 @@ public class OrderList {
 		
 		
 		
-		Block newBlock = new Block(new OrderId(value.getIndex().getReplicaId(),seqNr)
+		Block newBlock = new Block(new OrderId(value.getReplicaId(),seqNr)
 				,left,right,Optional.empty(),new Content(Optional.of(value),Optional.empty()));
 		
 		integrateInsert(newBlock);
 		return newBlock;
 	}
 	
-	public void move(int src, int target) {
+	public void moveByKey(IndexK src, IndexK target) {
+		List<IndexK> orderList = getOrderList();
+		int srcIndex = -1; int targetIndex = -1; int count = 0;
+		for(IndexK index : orderList) {
+			if(index.equals(src)) {
+				srcIndex = count;
+			}
+			
+			if(index.equals(target)) {
+				targetIndex = count;
+			}
+			count +=1;
+		}
+		moveByIndex(srcIndex,targetIndex);
+	}
+	
+	public void moveByIndex(int src, int target) {
 		Block moved = insert(target,null);
 		Optional<OrderId> srcId = findPosition(src);
 		int i = srcId.isPresent() ? indexOf(srcId.get()) : -1;

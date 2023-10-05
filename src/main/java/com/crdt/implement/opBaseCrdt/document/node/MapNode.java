@@ -14,8 +14,6 @@ import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes;
 import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes.Leaf;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
-import com.crdt.implement.opBaseCrdt.document.list.ListRef;
-import com.crdt.implement.opBaseCrdt.document.list.RefTypes;
 import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes;
 import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 

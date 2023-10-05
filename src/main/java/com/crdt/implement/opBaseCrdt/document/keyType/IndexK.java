@@ -8,7 +8,8 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public class IndexK implements Key{
-	private Id index;
+	private int index;
+	private String replicaId;
 	
 	@Override
 	public int hashCode() {

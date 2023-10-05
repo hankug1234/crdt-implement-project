@@ -9,8 +9,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import com.crdt.implement.opBaseCrdt.document.keyType.HeadK;
-
 public class VectorClock implements Comparable<VectorClock> {
 	private Map<String,Long> vectorClock;
 	

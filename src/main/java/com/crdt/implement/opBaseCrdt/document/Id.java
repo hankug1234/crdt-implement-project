@@ -15,6 +15,9 @@ public class Id {
 	
 	public int compareTo(Id other) {
 		int cmp = this.vectorClock.compareTo(other.getVectorClock());
+		if(cmp == Ord.Eq.getValue() || cmp == Ord.Cc.getValue()) {
+			return this.replicaId.compareTo(other.getReplicaId());
+		}
 		return cmp;
 	}
 	

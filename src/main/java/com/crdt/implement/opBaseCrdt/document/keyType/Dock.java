@@ -5,6 +5,11 @@ import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Doc;
 public class Dock implements Key{
 
 	@Override
+	public String toString() {
+		return "dock";
+	}
+	
+	@Override
 	public int hashCode() {
 		return -1;
 	}

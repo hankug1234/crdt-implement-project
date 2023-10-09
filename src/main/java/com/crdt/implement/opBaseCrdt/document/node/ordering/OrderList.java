@@ -7,10 +7,12 @@ import java.util.Optional;
 import com.crdt.implement.opBaseCrdt.document.Id;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
+import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-
+import lombok.extern.slf4j.Slf4j;
+@Slf4j
 @AllArgsConstructor
 @Getter
 public class OrderList {
@@ -22,7 +24,13 @@ public class OrderList {
 		this.lastSeqNr = 0;
 	}
 	
-	public List<IndexK> getOrderList(){
+	public OrderList clone() {
+		List<Block> newList = new ArrayList<>();
+		newList.addAll(this.list);
+		return new OrderList(newList,this.lastSeqNr);
+	}
+	
+	public List<TypeTag> getOrderList(){
 		return getList().stream().map(l -> l.getValue().getContent().get()).toList();
 	}
 	
@@ -37,7 +45,7 @@ public class OrderList {
 					if(index != -1) {
 						Block target = list.get(index);
 						OrderId movedTo = target.getMovedTo().get();
-						if(from.equals(movedTo) && !target.isTombstone()) {
+						if(block.getId().equals(movedTo) && !target.isTombstone()) {
 							result.add(target);
 						}
 					}
@@ -60,6 +68,14 @@ public class OrderList {
 			count +=1;
 		}
 		return -1;
+	}
+	
+	public Optional<Block> findBlockByIndex(int index) {
+		List<Block> l = getList();
+		if(index >= l.size()) {
+			return Optional.empty();
+		}
+		return Optional.of(l.get(index));
 	}
 	
 	private Optional<OrderId> findPosition(int index) {
@@ -101,30 +117,26 @@ public class OrderList {
 		
 	}
 	
-	public void integrateMoved(Block block) {
-		Content content = block.getValue();
+	public void integrateMoved(Block src ,Block target) {
+		Content content = target.getValue();
 		if(content.isMoved()) {
 			Moved moved1 = content.getMoved().get();
-			int fromIndex = indexOf(moved1.getFrom());
-			if(fromIndex != -1) {
+			
+			if(!src.getMovedTo().isPresent()) {
+				src.setMovedTo(Optional.of(target.getId()));
+			}else {
+				int targetIndex = indexOf(src.getMovedTo().get());
+				Block curTarget = this.list.get(targetIndex);
 				
-				Block src = this.list.get(fromIndex);
-				if(!src.getMovedTo().isPresent()) {
-					src.setMovedTo(Optional.of(block.getId()));
-				}else {
-					int targetIndex = indexOf(src.getMovedTo().get());
-					Block target = this.list.get(targetIndex);
-					
-					Content tarContent = target.getValue();
-					if(tarContent.isMoved()) {
-						Moved moved2 = tarContent.getMoved().get();
-						int prio1 = moved1.getPriority(); int prio2 = moved2.getPriority();
-						if(prio1 > prio2 || (prio1 == prio2 && block.getId().compareTo(target.getId()) > 0 )) {
-							src.setMovedTo(Optional.of(block.getId()));
-						}	
+				Content tarContent = curTarget.getValue();
+				if(tarContent.isMoved()) {
+					Moved moved2 = tarContent.getMoved().get();
+					int prio1 = moved1.getPriority(); int prio2 = moved2.getPriority();
+					if(prio1 > prio2 || (prio1 == prio2 && target.getId().compareTo(curTarget.getId()) > 0 )) {
+						src.setMovedTo(Optional.of(target.getId()));
 					}	
 				}	
-			}
+			}				
 		}
 	}
 	
@@ -135,65 +147,156 @@ public class OrderList {
 		block.setTombstone();
 	}
 	
-	public Block insert(int index, IndexK value) {
-		Optional<OrderId> right = findPosition(index);
-		int i = right.isPresent() ? indexOf(right.get()) : this.list.size();
+	public void deleteByOrderId(Optional<OrderId> id) {
+		int i = id.isPresent() ? indexOf(id.get()) : -1;
+		Block block = this.list.get(i);
+		block.setTombstone();
+	}
+	
+	public Block insertByOrderId(OrderId orderId, TypeTag value, int location) {
+		Optional<OrderId> right; int i = -1; Optional<OrderId> left;
+		
+		if(location == -1) {
+			right = Optional.of(orderId);
+			i = right.isPresent() ? indexOf(right.get()) : this.list.size();
+			left = (i-1) >= 0 ? Optional.of(this.list.get(i-1).getId()) : Optional.empty();
+		}else {
+			left = Optional.of(orderId);
+			i = left.isPresent() ? indexOf(left.get()) : this.list.size();
+			right = (i+1) < this.list.size() ? Optional.of(this.list.get(i+1).getId()) : Optional.empty();
+		}
+		
+		
 		long seqNr = this.lastSeqNr + 1L;
-		Optional<OrderId> left = (i-1) >= 0 ? Optional.of(this.list.get(i-1).getId()) : Optional.empty();
 		
 		
+		Key key = value.getKey();
+		if(!(key instanceof IndexK)) {
+			throw new RuntimeException();
+		}
 		
-		Block newBlock = new Block(new OrderId(value.getReplicaId(),seqNr)
+		IndexK indexK = (IndexK) key;
+		Block newBlock = new Block(new OrderId(indexK.getReplicaId(),seqNr)
 				,left,right,Optional.empty(),new Content(Optional.of(value),Optional.empty()));
 		
 		integrateInsert(newBlock);
 		return newBlock;
 	}
 	
-	public void moveByKey(IndexK src, IndexK target) {
-		List<IndexK> orderList = getOrderList();
-		int srcIndex = -1; int targetIndex = -1; int count = 0;
-		for(IndexK index : orderList) {
-			if(index.equals(src)) {
+	public Block insert(int index, TypeTag value) {
+		Optional<OrderId> right = findPosition(index);
+		int i = right.isPresent() ? indexOf(right.get()) : this.list.size();
+		long seqNr = this.lastSeqNr + 1L;
+		Optional<OrderId> left = (i-1) >= 0 ? Optional.of(this.list.get(i-1).getId()) : Optional.empty();
+		
+		Key key = value.getKey();
+		if(!(key instanceof IndexK)) {
+			throw new RuntimeException();
+		}
+		
+		IndexK indexK = (IndexK) key;
+		Block newBlock = new Block(new OrderId(indexK.getReplicaId(),seqNr)
+				,left,right,Optional.empty(),new Content(Optional.of(value),Optional.empty()));
+		
+		integrateInsert(newBlock);
+		return newBlock;
+	}
+	
+	public Block insertByMetaData(BlockMetaData meta, TypeTag tag) {
+		Key key = tag.getKey();
+		if(!(key instanceof IndexK)) {
+			throw new RuntimeException();
+		}
+		IndexK indexK = (IndexK) key;
+		Block newBlock = new Block(new OrderId(indexK.getReplicaId(),meta.getSeqNr())
+				,meta.getLeft(),meta.getRight(),Optional.empty(),new Content(Optional.of(tag),Optional.empty()));
+		
+		integrateInsert(newBlock);
+		return newBlock;
+	}
+	
+	public BlockMetaData getInsertMetaData(int index) {
+		Optional<OrderId> right = findPosition(index);
+		int i = right.isPresent() ? indexOf(right.get()) : this.list.size();
+		Optional<OrderId> left = (i-1) >= 0 ? Optional.of(this.list.get(i-1).getId()) : Optional.empty();
+		
+		BlockMetaData metaData = new BlockMetaData(left,right,this.lastSeqNr+1L);
+		
+		return metaData;
+	}
+	
+	public void moveByKey(TypeTag src, int index) {
+		List<TypeTag> orderList = getOrderList();
+		int srcIndex = -1; int count = 0;
+		for(TypeTag tag : orderList) {
+			if(tag.equals(src)) {
 				srcIndex = count;
-			}
-			
-			if(index.equals(target)) {
-				targetIndex = count;
 			}
 			count +=1;
 		}
-		moveByIndex(srcIndex,targetIndex);
+		moveByIndex(srcIndex,index);
 	}
 	
+	
+	public void move(OrderId src, OrderId dst, int location) {
+		int srcIndex = indexOf(src); int dstIndex = indexOf(dst);
+		if(srcIndex == -1 || this.list.get(srcIndex).isTombstone()) {
+			return;
+		}
+		else {
+			if(dstIndex == -1) {
+				return;
+			}else {
+				Block srcBlock = this.list.get(srcIndex);
+				TypeTag value = srcBlock.getValue().getContent().get();
+				Block moved = insertByOrderId(dst,value,location);
+				int prio = 0;
+				if(srcBlock.getMovedTo().isPresent()) {
+					int moveToIndex = indexOf(srcBlock.getMovedTo().get());
+					Block moveToBlock = this.list.get(moveToIndex);
+					prio = moveToBlock.getValue().getMoved().get().getPriority() + 1;
+				}
+				
+				moved.setMovedTo(Optional.empty());
+				moved.getValue().setMoved(Optional.of(new Moved(srcBlock.getId(),prio)));
+				
+				integrateMoved(srcBlock,moved);
+			}
+			
+		}
+		
+	}
+	
+	
 	public void moveByIndex(int src, int target) {
-		Block moved = insert(target,null);
+	
 		Optional<OrderId> srcId = findPosition(src);
 		int i = srcId.isPresent() ? indexOf(srcId.get()) : -1;
 		Block srcBlock = this.list.get(i);
 		
-		int prio = 0;
-		if(srcBlock.getMovedTo().isPresent()) {
-			int moveToIndex = indexOf(srcBlock.getMovedTo().get());
-			Block moveToBlock = this.list.get(moveToIndex);
-			prio = moveToBlock.getValue().getMoved().get().getPriority() + 1;
+		if(srcBlock.getValue().isTombstone()) {
+			return;
+		}else {
+			Block moved = insert(target,srcBlock.getValue().getContent().get());
+			int prio = 0;
+			if(srcBlock.getMovedTo().isPresent()) {
+				int moveToIndex = indexOf(srcBlock.getMovedTo().get());
+				Block moveToBlock = this.list.get(moveToIndex);
+				prio = moveToBlock.getValue().getMoved().get().getPriority() + 1;
+			}
+			
+			moved.setMovedTo(Optional.empty());
+			moved.getValue().setMoved(Optional.of(new Moved(srcBlock.getId(),prio)));
+			
+			integrateMoved(srcBlock,moved);
 		}
-		
-		srcBlock.setMovedTo(Optional.empty());
-		srcBlock.getValue().setMoved(Optional.of(new Moved(srcBlock.getId(),prio)));
-		
-		integrateMoved(moved);
 	}
 	
 	public void integrateInsert(Block block) {
 		OrderId id = block.getId();
-		if(this.lastSeqNr == id.getSeq()-1L) {
-			this.lastSeqNr = Long.max(lastSeqNr,id.getSeq());
-			int index = findInsertIndex(block);
-			this.list.add(index, block);
-		}else {
-			throw new RuntimeException();
-		}
+		this.lastSeqNr = Long.max(lastSeqNr,id.getSeq());
+		int index = findInsertIndex(block);
+		this.list.add(index, block);
 	}
 	
 	

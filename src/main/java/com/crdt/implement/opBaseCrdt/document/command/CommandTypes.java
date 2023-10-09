@@ -2,6 +2,7 @@ package com.crdt.implement.opBaseCrdt.document.command;
 
 import com.crdt.implement.opBaseCrdt.document.expression.Expr;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes;
+import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.signal.LocationInstructor;
 import com.crdt.implement.opBaseCrdt.document.values.Val;
 
@@ -42,13 +43,14 @@ public class CommandTypes {
 	@Getter
 	public static class Move implements Command{
 		private Expr src;
-		private Expr tar;
+		private int from;
+		private int to;
+		private int location;
 	}
 	
 	@AllArgsConstructor
 	@Getter
-	public static class Sequence implements Command{
-		private Command command1;
-		private Command command2;
+	public static class Var implements Command{
+		private Expr var;
 	}
 }

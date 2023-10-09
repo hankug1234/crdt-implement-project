@@ -3,6 +3,7 @@ package com.crdt.implement.opBaseCrdt.document;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 
 import org.json.JSONObject;
@@ -17,22 +18,27 @@ import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Get;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Index;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Var;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
-import com.crdt.implement.opBaseCrdt.document.keyType.Key;
-import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
-import com.crdt.implement.opBaseCrdt.document.node.BranchNode;
-import com.crdt.implement.opBaseCrdt.document.node.LeafNode;
-import com.crdt.implement.opBaseCrdt.document.node.ListNode;
 import com.crdt.implement.opBaseCrdt.document.node.MapNode;
 import com.crdt.implement.opBaseCrdt.document.node.Node;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.Block;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes;
-import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes.ListT;
-import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes.MapT;
 import com.crdt.implement.reliableBroadcast.OpBaseEvent;
 import com.crdt.implement.vectorClock.VectorClock;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObject,List<Command>,List<Operation>>{
 
+	private String replicaId;
+	
+	public OpBaseDocOperation(String replicaId) {
+		this.replicaId = replicaId;
+	}
+	
+	
 	@Override
 	public Document Default() {
 		return new Document(new MapNode());
@@ -40,20 +46,29 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 
 	@Override
 	public JSONObject Query(Document crdt) {
-		// TODO Auto-generated method stub
-		return null;
+		JSONObject result = new JSONObject();
+		if(crdt.getVar() != null) {
+			
+			Optional<Node> node = crdt.getDocument().query(crdt.getVar());
+			if(node.isPresent()) {
+				result.put("answer", node.get().toJson());
+				return result;
+			}
+		}
+		result.put("answer", false);
+		return result;
 	}
 
 	@Override
 	public Document copy(Document crdt) {
-		return null;
+		return crdt.clone();
 	}
 
 	@Override
 	public List<Operation> Prepare(Document crdt, List<Command> command) {
 		return command.stream().map(
 				(Command cmd) -> {
-					Operation op;
+					Operation op = null;
 					if(cmd instanceof CommandTypes.Assign) {
 						
 						CommandTypes.Assign assign = (CommandTypes.Assign) cmd;
@@ -67,16 +82,21 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 					}else if(cmd instanceof CommandTypes.Insert) {
 						
 						CommandTypes.Insert insert = (CommandTypes.Insert) cmd;
-						op = makeOp(evalExpr(crdt,insert.getExpr()),new SignalTypes.InsertS(insert.getValue(),insert.getIndex()));
+						op = makeOp(evalExpr(crdt,insert.getExpr()),insertToInsertS(crdt,insert));
 						
 					}else if(cmd instanceof CommandTypes.Move) {
 						
 						CommandTypes.Move move = (CommandTypes.Move) cmd;
-						op = makeOp(evalExpr(crdt,move.getSrc()),new SignalTypes.MoveS(evalExpr(crdt,move.getTar())));
+						op = makeOp(evalExpr(crdt,move.getSrc()),moveToMoveS(crdt,move));
 						
 					}else if(cmd instanceof CommandTypes.Let) {
 						CommandTypes.Let let = (CommandTypes.Let) cmd;
 						crdt.getVariables().put(let.getX(),evalExpr(crdt,let.getExpr()));
+						return Optional.empty();
+					}else if(cmd instanceof CommandTypes.Var) {
+						CommandTypes.Var var = (CommandTypes.Var) cmd;
+						Cursor cur = evalExpr(crdt,var.getVar());
+						crdt.setVar(cur);
 						return Optional.empty();
 					}
 					else {
@@ -98,6 +118,12 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 		
 		for(Operation op : data) {
 			op.setId(new Id(replicaId,vectorClock));
+			if((op.getSignal() instanceof SignalTypes.InsertS)) {
+				SignalTypes.InsertS insert = (SignalTypes.InsertS) op.getSignal();
+				if(insert.getMeta() == null) {
+					setMetaData(crdt,op.getCur(),insert);
+				}
+			}
 			node.applyOp(op);
 		}
 		
@@ -128,7 +154,7 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 		}else if(expr instanceof Get) {
 			Get get = (Get) expr; Expr nextExpr = get.getExpr();
 			Function<Cursor,Cursor> f = (Cursor c) -> {
-				c.append((Key k) -> new MapT(k) , new StringK(get.getKey()));
+				c.append(get.getTag());
 				return c;
 			};
 			fs.add(f);
@@ -136,7 +162,7 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 		}else if(expr instanceof Index) {
 			Index index = (Index) expr; Expr nextExpr = index.getExpr();
 			Function<Cursor,Cursor> f = (Cursor c) -> {
-				c.append((Key k) -> new ListT(k) , new IndexK(index.getIndex(),index.getReplicaId()));
+				c.append(index.getTag());
 				return c;
 			};
 			fs.add(f);
@@ -156,6 +182,35 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 			cur = f.apply(cur);
 		}
 		return cur;
+	}
+	
+	public SignalTypes.InsertS insertToInsertS(Document crdt,CommandTypes.Insert insert){
+		UUID uuid = UUID.randomUUID();
+		IndexK indexK = new IndexK(uuid.toString(),this.replicaId);
+		
+		return new SignalTypes.InsertS(insert.getValue(), null,insert.getIndex(), indexK);
+	}
+	
+	public void setMetaData(Document crdt,Cursor cur,SignalTypes.InsertS insertS) {
+		Node node = crdt.getDocument();
+		Optional<BlockMetaData> meta = node.getInsertMetaData(cur, insertS.getIndex());
+		if(!meta.isPresent()) {
+			throw new RuntimeException();
+		}
+		insertS.setMeta(meta.get());
+	}
+	
+	public SignalTypes.MoveS moveToMoveS(Document crdt, CommandTypes.Move move){
+		Node node = crdt.getDocument();
+		Cursor location = evalExpr(crdt,move.getSrc());
+		Optional<Block> src = node.getOrderBlock(location, move.getFrom());
+		Optional<Block> dst = node.getOrderBlock(location, move.getTo());
+		
+		if(!src.isPresent() || !dst.isPresent()) {
+			throw new RuntimeException();
+		}
+		
+		return new SignalTypes.MoveS(src.get().getId(), dst.get().getId(), move.getLocation());
 	}
 
 }

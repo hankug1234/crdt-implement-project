@@ -6,6 +6,7 @@ import com.crdt.implement.opBaseCrdt.document.Id;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.node.Node;
+import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,7 +16,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Content {
-	private Optional<IndexK> content;
+	private Optional<TypeTag> content;
 	private Optional<Moved> moved;
 	
 	

@@ -4,4 +4,5 @@ import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 
 public interface TypeTag {
 	public Key getKey();
+	public String toString();
 }

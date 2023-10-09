@@ -18,8 +18,15 @@ public class OrderId {
 		return cmp;
 	}
 	
-	public boolean equals(OrderId other) {
-		if(this.replicaId.equals(other.getReplicaId()) && this.seq == other.getSeq()) {
+	@Override
+	public int hashCode() {
+		return 0;
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		OrderId otherId = (OrderId) other;
+		if(this.replicaId.equals(otherId.getReplicaId()) && this.seq == otherId.getSeq()) {
 			return true;
 		}
 		return false;

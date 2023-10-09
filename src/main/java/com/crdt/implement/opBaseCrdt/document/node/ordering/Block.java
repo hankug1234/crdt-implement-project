@@ -6,6 +6,7 @@ import com.crdt.implement.opBaseCrdt.document.Id;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.node.Node;
+import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,7 +30,7 @@ public class Block {
 		return value.isTombstone();
 	}
 	
-	public IndexK value() {
+	public TypeTag value() {
 		return value.getContent().get();
 	}
 }

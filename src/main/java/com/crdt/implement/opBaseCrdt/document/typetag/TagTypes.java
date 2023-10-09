@@ -12,8 +12,13 @@ public class TagTypes {
 		private Key key;
 		
 		@Override
+		public String toString() {
+			return "mapT = "+key.toString();
+		}
+		
+		@Override
 		public int hashCode() {
-			return 0;
+			return this.toString().hashCode();
 		}
 		
 		@Override
@@ -35,8 +40,13 @@ public class TagTypes {
 		private Key key;
 		
 		@Override
+		public String toString() {
+			return "listT = "+key.toString();
+		}
+		
+		@Override
 		public int hashCode() {
-			return 1;
+			return this.toString().hashCode();
 		}
 		
 		@Override
@@ -58,8 +68,13 @@ public class TagTypes {
 		private Key key;
 		
 		@Override
+		public String toString() {
+			return "regT = "+key.toString();
+		}
+		
+		@Override
 		public int hashCode() {
-			return 2;
+			return this.toString().hashCode();
 		}
 		
 		@Override

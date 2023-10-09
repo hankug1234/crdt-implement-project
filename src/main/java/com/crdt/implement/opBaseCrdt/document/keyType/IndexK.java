@@ -8,19 +8,24 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public class IndexK implements Key{
-	private int index;
+	private String id;
 	private String replicaId;
 	
 	@Override
+	public String toString() {
+		return replicaId +" : " + id;
+	}
+	
+	@Override
 	public int hashCode() {
-		return 1;
+		return this.toString().hashCode();
 	}
 	
 	@Override
 	public boolean equals(Object o) {
 		if(o instanceof IndexK) {
 			IndexK i = (IndexK) o;
-			if(i.getIndex() == this.index) {
+			if(i.getId().equals(this.id)) {
 				return true;
 			}
 			return false;

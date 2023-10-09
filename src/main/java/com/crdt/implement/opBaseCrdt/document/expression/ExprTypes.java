@@ -2,6 +2,9 @@ package com.crdt.implement.opBaseCrdt.document.expression;
 
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
+import com.crdt.implement.opBaseCrdt.document.typetag.BranchTag;
+import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes;
+import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,6 +17,10 @@ public class ExprTypes {
 	@Setter
 	public static class Doc implements Expr{
 		private Expr expr;
+		
+		public Doc() {
+			this.expr = null;
+		}
 	}
 	
 	@AllArgsConstructor
@@ -22,6 +29,12 @@ public class ExprTypes {
 	public static class Var implements Expr{
 		private String name;
 		private Expr expr;
+		
+		public Var(String name) {
+			this.name = name; 
+			this.expr = null;
+		}
+		
 		
 		@Override
 		public int hashCode() {
@@ -47,7 +60,13 @@ public class ExprTypes {
 	@Setter
 	public static class Get implements Expr{
 		private Expr expr;
-		private String key;
+		private TypeTag tag;
+		
+		public Get(TypeTag tag) {
+			this.tag = tag;
+			this.expr = null;
+		}
+		
 	}
 	
 	@AllArgsConstructor
@@ -55,8 +74,12 @@ public class ExprTypes {
 	@Setter
 	public static class Index implements Expr{	
 		private Expr expr;
-		private int Index;
-		private String replicaId;
+		private TypeTag tag;
+		
+		public Index(TypeTag tag) {
+			this.tag = tag;
+			this.expr = null;
+		}
 	}
 	
 }

@@ -7,15 +7,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import com.crdt.implement.opBaseCrdt.document.Id;
-import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
-import com.crdt.implement.opBaseCrdt.document.cursor.View;
-import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes;
-import com.crdt.implement.opBaseCrdt.document.cursor.ViewTypes.Leaf;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
-import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes;
 import com.crdt.implement.opBaseCrdt.document.typetag.TypeTag;
+
 
 public class MapNode extends BranchNode{
 	public MapNode(Map<TypeTag,Node> children, Map<Key,Set<Id>> presentSets) {
@@ -26,19 +25,55 @@ public class MapNode extends BranchNode{
 		super(new HashMap<>(),new HashMap<>());
 	}
 	
-	public Set<String> keySet(){
-		return this.getPresentSets().entrySet().stream().map((Map.Entry<Key,Set<Id>> e)->{
-			StringK key = (StringK) e.getKey();
-			return key.getValue();
+	public MapNode clone() {
+		Map<TypeTag,Node> newChildren = new HashMap<>();
+		Map<Key,Set<Id>> newPresentSets = new HashMap<>();
+		for(Map.Entry<TypeTag, Node> e : this.getChildren().entrySet()) {
+			newChildren.put(e.getKey(), e.getValue().clone());
+		}
+		for(Map.Entry<Key, Set<Id>> e : this.getPresentSets().entrySet()) {
+			newPresentSets.put(e.getKey(), new HashSet<>(e.getValue()));
+		}
+		return new MapNode(newChildren,newPresentSets);
+	}
+	
+	public Set<TypeTag> keySet(){
+		return this.getChildren().entrySet().stream().map((Map.Entry<TypeTag,Node> e)->{
+			TypeTag key = (TypeTag) e.getKey();
+			return key;
 		}).collect(Collectors.toSet());
 	}
 	
-	public BranchNode cloneWithChildren(Map<TypeTag,Node> children) {
-		return new MapNode(children,this.getPresentSets());
-	}
+	@Override 
+	public Object toJson() {
+		Set<TypeTag> keys = keySet();
+		JSONObject result = new JSONObject();
+		Map<String,JSONArray> temp = new HashMap<>();
+		for(TypeTag key : keys) {
+			StringK sk = (StringK) key.getKey();
+			String name = sk.getValue();
+			
+			Node node = this.getChild(key);
+			
+			if(temp.containsKey(name)) {
+				temp.get(name).put(node.toJson());
+			}else {
+				JSONArray arr = new JSONArray();
+				arr.put(node.toJson());
+				temp.put(name, arr);
+			}
+		}
+		
+		for(Map.Entry<String, JSONArray> e : temp.entrySet()) {
+			if(e.getValue().length() > 1) {
+				result.put(e.getKey(), e.getValue());
+			}else {
+				result.put(e.getKey(), e.getValue().get(0));
+			}
+		}
+		
+		return result;
 	
-	public BranchNode cloneWithPresentSets(Map<Key,Set<Id>> presentSets) {
-		return new MapNode(this.getChildren(),presentSets);
 	}
 	
 	@Override
@@ -51,14 +86,14 @@ public class MapNode extends BranchNode{
 	}
 	
 	public Optional<Set<Id>> clearMap(Id opId){
-		Set<String> keys = keySet();
+		Set<TypeTag> keys = keySet();
 		if(keys.isEmpty()) {
 			return Optional.empty();
 		}
 		
 		Set<Id> result = new HashSet<>();
-		for(String key : keys) {
-			Optional<Set<Id>> pres = clearElem(opId,new StringK(key));
+		for(TypeTag key : keys) {
+			Optional<Set<Id>> pres = clearElem(opId,key);
 			if(pres.isPresent()) {
 				result.addAll(pres.get());
 			}

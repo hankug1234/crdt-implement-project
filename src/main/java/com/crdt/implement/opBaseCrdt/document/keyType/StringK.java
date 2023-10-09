@@ -9,8 +9,13 @@ public class StringK implements Key{
 	private String value;
 	
 	@Override
+	public String toString() {
+		return value;
+	}
+	
+	@Override
 	public int hashCode() {
-		return 2;
+		return this.toString().hashCode();
 	}
 	
 	@Override
@@ -20,8 +25,6 @@ public class StringK implements Key{
 			if(str.getValue().equals(this.value)) {
 				return true;
 			}
-			
-			return false;
 		}
 		return false;
 	}

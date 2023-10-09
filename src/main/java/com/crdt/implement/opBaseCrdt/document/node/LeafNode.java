@@ -1,15 +1,21 @@
 package com.crdt.implement.opBaseCrdt.document.node;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import com.crdt.implement.opBaseCrdt.document.Id;
 import com.crdt.implement.opBaseCrdt.document.Operation;
 import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.Block;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
 import com.crdt.implement.opBaseCrdt.document.values.LeafVal;
 import com.crdt.implement.vectorClock.Ord;
 
@@ -23,6 +29,23 @@ public class LeafNode implements Node{
 
 	public List<LeafVal> getValues(){
 		return values.entrySet().stream().map(e->e.getValue()).toList();
+	}
+	
+	public LeafVal getValue() {
+		Set<Id> ids = this.values.keySet();
+		Iterator<Id> iter = ids.iterator();
+		Id min = iter.next();
+		while(iter.hasNext()) {
+			Id next = iter.next();
+			if(min.compareTo(next) > 0) {
+				min = next;
+			}
+		}
+		return values.get(min);
+	}
+	
+	public Map<Id,LeafVal> getIdValueMap(){
+		return this.values;
 	}
 	
 	public void setRegValue(Id id,LeafVal value) {
@@ -48,5 +71,38 @@ public class LeafNode implements Node{
 	@Override
 	public Node clone() {
 		return null;
+	}
+
+	@Override
+	public Object toJson() {
+		if(this.values.size() > 1) {
+			JSONObject result = new JSONObject();
+			for(Map.Entry<Id,LeafVal> e : values.entrySet()) {
+				result.put(e.getKey().getReplicaId(), e.getValue().toString());
+			}
+		}
+		
+		if(!values.isEmpty()) {
+			return this.getValue();
+		}
+		return null;
+	}
+
+	@Override
+	public Optional<Node> query(Cursor cur) {
+		// TODO Auto-generated method stub
+		return Optional.empty();
+	}
+
+	@Override
+	public Optional<BlockMetaData> getInsertMetaData(Cursor cur, int index) {
+		// TODO Auto-generated method stub
+		return Optional.empty();
+	}
+
+	@Override
+	public Optional<Block> getOrderBlock(Cursor cur, int index) {
+		// TODO Auto-generated method stub
+		return Optional.empty();
 	}
 }

@@ -1,6 +1,7 @@
 package com.crdt.implement.opBaseCrdt.document;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -11,6 +12,8 @@ import java.util.concurrent.TimeoutException;
 import org.json.JSONObject;
 
 import com.crdt.implement.opBaseCrdt.document.command.Command;
+import com.crdt.implement.opBaseCrdt.document.command.CommandTypes;
+import com.crdt.implement.opBaseCrdt.document.expression.Expr;
 import com.crdt.implement.persistence.OpBaseCrdtDB;
 import com.crdt.implement.reliableBroadcast.EndPoint;
 import com.crdt.implement.reliableBroadcast.OpBaseProtocal;
@@ -29,13 +32,13 @@ public class JsonDocument {
 	
 	public JsonDocument(String replicaId,OpBaseCrdtDB<Document,List<Operation>> db,Duration timeInterval) {
 		this.replicaId = replicaId;
-		this.system = ActorSystem.create(Replicator.create(db, replicaId,new OpBaseDocOperation(),timeInterval),replicaId);
+		this.system = ActorSystem.create(Replicator.create(db, replicaId,new OpBaseDocOperation(replicaId),timeInterval),replicaId);
 	}
 	
-	public JSONObject query() throws InterruptedException, ExecutionException, TimeoutException{
+	public JSONObject query(Expr expr) throws InterruptedException, ExecutionException, TimeoutException{
 		
 		CompletionStage<OpBaseResponse> stage = AskPattern
-				.ask(system, replay-> new Protocal.Query(replay), Duration.ofSeconds(3), system.scheduler());
+				.ask(system, replay-> new Protocal.Command<List<Command>>(List.of(new CommandTypes.Var(expr)),replay), Duration.ofSeconds(3), system.scheduler());
 		
 		Protocal.Res<JSONObject> result = (Protocal.Res<JSONObject>) stage.toCompletableFuture().get(1L, TimeUnit.SECONDS);
 		
@@ -43,13 +46,13 @@ public class JsonDocument {
 	}
 	
 	
-	public JSONObject applyCommands(List<Command> cmds) throws InterruptedException, ExecutionException, TimeoutException{
+	public void applyCommands(List<Command> cmds) throws InterruptedException, ExecutionException, TimeoutException{
+		
+		List<Command> cloneCmds = new ArrayList<>();
+		cloneCmds.addAll(cmds);
+		
 		CompletionStage<OpBaseResponse> stage = AskPattern
-				.ask(system, replay-> new Protocal.Command<List<Command>>(cmds, replay), Duration.ofSeconds(3), system.scheduler());
-		
-		Protocal.Res<JSONObject> result = (Protocal.Res<JSONObject>) stage.toCompletableFuture().get(1L, TimeUnit.SECONDS);
-		
-		return result.getRes();
+				.ask(system, replay-> new Protocal.Command<List<Command>>(cloneCmds, replay), Duration.ofSeconds(3), system.scheduler());
 	}
 	
 	public void connect(JsonDocument  json) {

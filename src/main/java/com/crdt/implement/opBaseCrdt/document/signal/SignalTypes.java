@@ -1,6 +1,8 @@
 package com.crdt.implement.opBaseCrdt.document.signal;
 
-import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
+import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.OrderId;
 import com.crdt.implement.opBaseCrdt.document.values.Val;
 
 import lombok.AllArgsConstructor;
@@ -18,7 +20,14 @@ public class SignalTypes {
 	@Getter
 	public static class InsertS implements Signal{
 		private Val value;
+		private BlockMetaData meta;
 		private int index;
+		private IndexK key;
+		
+		
+		public void setMeta(BlockMetaData meta) {
+			this.meta = meta;
+		}
 	}
 	
 	public static class DeleteS implements Signal{
@@ -28,6 +37,8 @@ public class SignalTypes {
 	@AllArgsConstructor
 	@Getter
 	public static class MoveS implements Signal{
-		private Cursor target;
+		private OrderId from;
+		private OrderId to;
+		private int location;
 	}
 }

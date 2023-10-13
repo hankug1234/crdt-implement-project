@@ -117,29 +117,6 @@ public class OrderList {
 		
 	}
 	
-	public void integrateMoved(Block src ,Block target) {
-		Content content = target.getValue();
-		if(content.isMoved()) {
-			Moved moved1 = content.getMoved().get();
-			
-			if(!src.getMovedTo().isPresent()) {
-				src.setMovedTo(Optional.of(target.getId()));
-			}else {
-				int targetIndex = indexOf(src.getMovedTo().get());
-				Block curTarget = this.list.get(targetIndex);
-				
-				Content tarContent = curTarget.getValue();
-				if(tarContent.isMoved()) {
-					Moved moved2 = tarContent.getMoved().get();
-					int prio1 = moved1.getPriority(); int prio2 = moved2.getPriority();
-					if(prio1 > prio2 || (prio1 == prio2 && target.getId().compareTo(curTarget.getId()) > 0 )) {
-						src.setMovedTo(Optional.of(target.getId()));
-					}	
-				}	
-			}				
-		}
-	}
-	
 	public void delete(int index) {
 		Optional<OrderId> target = findPosition(index);
 		int i = target.isPresent() ? indexOf(target.get()) : -1;
@@ -147,13 +124,17 @@ public class OrderList {
 		block.setTombstone();
 	}
 	
-	public void deleteByOrderId(Optional<OrderId> id) {
-		int i = id.isPresent() ? indexOf(id.get()) : -1;
-		Block block = this.list.get(i);
-		block.setTombstone();
+	public void deleteByTag(TypeTag tag) {
+		for(Block block : this.getList()) {
+			if(!block.isTombstone()) {
+				if(block.getValue().getContent().get().equals(tag)) {
+					block.isTombstone(); return;
+				}
+			}
+		}
 	}
 	
-	public Block insertByOrderId(OrderId orderId, TypeTag value, int location) {
+	public Block insertByOrderId(OrderId orderId, TypeTag value, int location,OrderId id) {
 		Optional<OrderId> right; int i = -1; Optional<OrderId> left;
 		
 		if(location == -1) {
@@ -176,12 +157,12 @@ public class OrderList {
 		}
 		
 		IndexK indexK = (IndexK) key;
-		Block newBlock = new Block(new OrderId(indexK.getReplicaId(),seqNr)
-				,left,right,Optional.empty(),new Content(Optional.of(value),Optional.empty()));
+		Block newBlock = new Block(id ,left,right,Optional.empty(),new Content(Optional.of(value),Optional.empty()));
 		
 		integrateInsert(newBlock);
 		return newBlock;
 	}
+	
 	
 	public Block insert(int index, TypeTag value) {
 		Optional<OrderId> right = findPosition(index);
@@ -201,6 +182,7 @@ public class OrderList {
 		integrateInsert(newBlock);
 		return newBlock;
 	}
+	
 	
 	public Block insertByMetaData(BlockMetaData meta, TypeTag tag) {
 		Key key = tag.getKey();
@@ -225,6 +207,7 @@ public class OrderList {
 		return metaData;
 	}
 	
+	
 	public void moveByKey(TypeTag src, int index) {
 		List<TypeTag> orderList = getOrderList();
 		int srcIndex = -1; int count = 0;
@@ -238,7 +221,31 @@ public class OrderList {
 	}
 	
 	
-	public void move(OrderId src, OrderId dst, int location) {
+	public void integrateMoved(Block src ,Block target) {
+		Content content = target.getValue();
+		if(content.isMoved()) {
+			Moved moved1 = content.getMoved().get();
+			
+			if(!src.getMovedTo().isPresent()) {
+				src.setMovedTo(Optional.of(target.getId()));
+			}else {
+				int targetIndex = indexOf(src.getMovedTo().get());
+				Block curTarget = this.list.get(targetIndex);
+				
+				Content tarContent = curTarget.getValue();
+				if(tarContent.isMoved()) {
+					Moved moved2 = tarContent.getMoved().get();
+					int prio1 = moved1.getPriority(); int prio2 = moved2.getPriority();
+					if(prio1 > prio2 || (prio1 == prio2 && target.getId().compareTo(curTarget.getId()) > 0 )) {
+						log.info(target.getId().getReplicaId() +" : "+ target.getId().getSeq()+" : "+prio1);
+						src.setMovedTo(Optional.of(target.getId()));
+					}	
+				}	
+			}				
+		}
+	}
+	
+	public void move(OrderId src, OrderId dst,int priority ,int location,OrderId id) {
 		int srcIndex = indexOf(src); int dstIndex = indexOf(dst);
 		if(srcIndex == -1 || this.list.get(srcIndex).isTombstone()) {
 			return;
@@ -249,16 +256,10 @@ public class OrderList {
 			}else {
 				Block srcBlock = this.list.get(srcIndex);
 				TypeTag value = srcBlock.getValue().getContent().get();
-				Block moved = insertByOrderId(dst,value,location);
-				int prio = 0;
-				if(srcBlock.getMovedTo().isPresent()) {
-					int moveToIndex = indexOf(srcBlock.getMovedTo().get());
-					Block moveToBlock = this.list.get(moveToIndex);
-					prio = moveToBlock.getValue().getMoved().get().getPriority() + 1;
-				}
+				Block moved = insertByOrderId(dst,value,location,id);
 				
 				moved.setMovedTo(Optional.empty());
-				moved.getValue().setMoved(Optional.of(new Moved(srcBlock.getId(),prio)));
+				moved.getValue().setMoved(Optional.of(new Moved(srcBlock.getId(),priority)));
 				
 				integrateMoved(srcBlock,moved);
 			}
@@ -291,6 +292,7 @@ public class OrderList {
 			integrateMoved(srcBlock,moved);
 		}
 	}
+	
 	
 	public void integrateInsert(Block block) {
 		OrderId id = block.getId();

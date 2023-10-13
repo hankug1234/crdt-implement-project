@@ -16,6 +16,7 @@ import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
 import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.Block;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.MoveMetaData;
 import com.crdt.implement.opBaseCrdt.document.values.LeafVal;
 import com.crdt.implement.vectorClock.Ord;
 
@@ -101,7 +102,7 @@ public class LeafNode implements Node{
 	}
 
 	@Override
-	public Optional<Block> getOrderBlock(Cursor cur, int index) {
+	public Optional<MoveMetaData> getMoveMetaData(Cursor cur, int src, int dst) {
 		// TODO Auto-generated method stub
 		return Optional.empty();
 	}

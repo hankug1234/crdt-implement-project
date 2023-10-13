@@ -22,6 +22,7 @@ import com.crdt.implement.opBaseCrdt.document.node.MapNode;
 import com.crdt.implement.opBaseCrdt.document.node.Node;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.Block;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.MoveMetaData;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes;
 import com.crdt.implement.reliableBroadcast.OpBaseEvent;
@@ -203,14 +204,14 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 	public SignalTypes.MoveS moveToMoveS(Document crdt, CommandTypes.Move move){
 		Node node = crdt.getDocument();
 		Cursor location = evalExpr(crdt,move.getSrc());
-		Optional<Block> src = node.getOrderBlock(location, move.getFrom());
-		Optional<Block> dst = node.getOrderBlock(location, move.getTo());
+		Optional<MoveMetaData> moveMetaData = node.getMoveMetaData(location, move.getFrom(), move.getTo());
 		
-		if(!src.isPresent() || !dst.isPresent()) {
+		if(!moveMetaData.isPresent()) {
 			throw new RuntimeException();
 		}
-		
-		return new SignalTypes.MoveS(src.get().getId(), dst.get().getId(), move.getLocation());
+		 
+		MoveMetaData meta = moveMetaData.get();
+		return new SignalTypes.MoveS(this.replicaId,meta.getSeqNr(),meta.getSrc(), meta.getDst(),meta.getPriority(), move.getLocation());
 	}
 
 }

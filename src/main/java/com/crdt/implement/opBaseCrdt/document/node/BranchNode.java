@@ -16,6 +16,8 @@ import com.crdt.implement.opBaseCrdt.document.keyType.Key;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.Block;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.MoveMetaData;
+import com.crdt.implement.opBaseCrdt.document.node.ordering.OrderId;
 import com.crdt.implement.opBaseCrdt.document.signal.LocationInstructor;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes;
@@ -179,6 +181,10 @@ public class BranchNode implements Node{
 			
 		}else if(signal instanceof SignalTypes.DeleteS) {
 			clearElem(op.getId(),key);
+			if(this instanceof ListNode) {
+				ListNode listNode = (ListNode) this;
+				listNode.getOrder().deleteByTag(key);
+			}
 		}else if(signal instanceof SignalTypes.InsertS) {
 			
 			Optional<Node> node = this.findChild(key);
@@ -206,7 +212,7 @@ public class BranchNode implements Node{
 			if(node.isPresent() && (node.get() instanceof ListNode)) {
 				SignalTypes.MoveS moveS = (MoveS) signal;
 				ListNode list = (ListNode) node.get();
-				list.getOrder().move(moveS.getFrom(), moveS.getTo(), moveS.getLocation());
+				list.getOrder().move(moveS.getFrom(), moveS.getTo(),moveS.getPriority(),moveS.getLocation(),new OrderId(moveS.getReplicaId(),moveS.getSeqNr()));
 			}
 			
 		}else {
@@ -245,12 +251,28 @@ public class BranchNode implements Node{
 	}
 
 	@Override
-	public Optional<Block> getOrderBlock(Cursor cur, int index) {
+	public Optional<MoveMetaData> getMoveMetaData(Cursor cur, int src, int dst){
 		Optional<Node> node = query(cur);
 		if(node.isPresent()) {
 			if(node.get() instanceof ListNode) {
 				ListNode listNode = (ListNode) node.get();
-				return listNode.getOrder().findBlockByIndex(index);
+				Optional<Block> srcBlock =  listNode.getOrder().findBlockByIndex(src);
+				Optional<Block> dstBlock =  listNode.getOrder().findBlockByIndex(dst);
+				if(srcBlock.isPresent() && dstBlock.isPresent()) {
+					OrderId srcOrderId = srcBlock.get().getId();
+					OrderId dstOrderId = dstBlock.get().getId();
+					Optional<OrderId> movedTo = srcBlock.get().getMovedTo();
+					int priority = 0;
+					if(movedTo.isPresent()) {
+						int movedToIndex = listNode.getOrder().indexOf(movedTo.get());
+						Optional<Block> movedToBlock =  listNode.getOrder().findBlockByIndex(movedToIndex);
+						if(movedToBlock.isPresent()) {
+							priority = movedToBlock.get().getValue().getMoved().get().getPriority()+1;
+						}
+					}
+					return Optional.of(new MoveMetaData(null,listNode.getOrder().getLastSeqNr()+1,srcOrderId,dstOrderId,priority));
+					
+				}
 			}
 		}
 		return Optional.empty();

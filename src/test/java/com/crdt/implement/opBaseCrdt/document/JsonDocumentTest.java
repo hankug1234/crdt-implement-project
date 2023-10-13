@@ -75,6 +75,49 @@ class JsonDocumentTest {
 	}
 	
 	@Test
+	@Order(3)
+	void testMove() throws InterruptedException, ExecutionException, TimeoutException {
+		List<Command> cmds = new LinkedList<>();
+		Command command1 = new CommandTypes.Move(new ExprTypes.Var("carts"), 2, 4, 1);
+		cmds.add(command1);
+		
+		doc2.applyCommands(cmds);
+		
+		Thread.sleep(1000);
+		
+		JSONObject result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		JSONObject result = doc.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		
+		Command command2 = new CommandTypes.Move(new ExprTypes.Var("carts"), 0, 7, 1);
+		Command command3 = new CommandTypes.Move(new ExprTypes.Var("carts"), 0, 3, 1);
+		
+		List<Command> cmds1 = new LinkedList<>();
+		List<Command> cmds2 = new LinkedList<>();
+		
+		cmds1.add(command2);
+		cmds2.add(command3);
+		
+		doc2.applyCommands(cmds1);
+		doc.applyCommands(cmds2);
+		
+		Thread.sleep(1000);
+		
+		result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		result = doc.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		assertTrue(true);
+	}
+	
+	@Test
 	@Order(2)
 	void testQuery() throws InterruptedException, ExecutionException, TimeoutException {
 		

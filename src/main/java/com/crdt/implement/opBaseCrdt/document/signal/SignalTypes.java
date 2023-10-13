@@ -37,8 +37,11 @@ public class SignalTypes {
 	@AllArgsConstructor
 	@Getter
 	public static class MoveS implements Signal{
+		private String replicaId;
+		private long seqNr;
 		private OrderId from;
 		private OrderId to;
+		private int priority;
 		private int location;
 	}
 }

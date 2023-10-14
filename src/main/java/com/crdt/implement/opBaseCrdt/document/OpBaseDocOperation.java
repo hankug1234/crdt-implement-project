@@ -18,6 +18,7 @@ import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Get;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Index;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Var;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
+import com.crdt.implement.opBaseCrdt.document.node.ListNode;
 import com.crdt.implement.opBaseCrdt.document.node.MapNode;
 import com.crdt.implement.opBaseCrdt.document.node.Node;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.Block;
@@ -163,7 +164,14 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 		}else if(expr instanceof Index) {
 			Index index = (Index) expr; Expr nextExpr = index.getExpr();
 			Function<Cursor,Cursor> f = (Cursor c) -> {
-				c.append(index.getTag());
+				int i = index.getIndex();
+				Optional<Node> node = crdt.getDocument().query(c);
+				if(node.isPresent()) {
+					if(node.get() instanceof ListNode) {
+						ListNode listNode = (ListNode) node.get();
+						c.append(listNode.getOrder().getOrderList().get(i));
+					}
+				}
 				return c;
 			};
 			fs.add(f);

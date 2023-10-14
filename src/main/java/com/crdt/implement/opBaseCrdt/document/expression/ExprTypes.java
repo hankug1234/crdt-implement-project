@@ -59,8 +59,8 @@ public class ExprTypes {
 	@Getter
 	@Setter
 	public static class Get implements Expr{
-		private Expr expr;
 		private TypeTag tag;
+		private Expr expr;
 		
 		public Get(TypeTag tag) {
 			this.tag = tag;
@@ -73,11 +73,11 @@ public class ExprTypes {
 	@Getter
 	@Setter
 	public static class Index implements Expr{	
+		private int index;
 		private Expr expr;
-		private TypeTag tag;
 		
-		public Index(TypeTag tag) {
-			this.tag = tag;
+		public Index(int index) {
+			this.index = index;
 			this.expr = null;
 		}
 	}

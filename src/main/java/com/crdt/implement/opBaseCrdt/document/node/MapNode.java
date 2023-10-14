@@ -55,19 +55,23 @@ public class MapNode extends BranchNode{
 			
 			Node node = this.getChild(key);
 			
-			if(temp.containsKey(name)) {
-				temp.get(name).put(node.toJson());
-			}else {
-				JSONArray arr = new JSONArray();
-				arr.put(node.toJson());
-				temp.put(name, arr);
+			Object json = node.toJson();
+			
+			if(json != null) {
+				if(temp.containsKey(name)) {
+					temp.get(name).put(json);
+				}else {
+					JSONArray arr = new JSONArray();
+					arr.put(json);
+					temp.put(name, arr);
+				}
 			}
 		}
 		
 		for(Map.Entry<String, JSONArray> e : temp.entrySet()) {
 			if(e.getValue().length() > 1) {
 				result.put(e.getKey(), e.getValue());
-			}else {
+			}else if(e.getValue().length() == 1){
 				result.put(e.getKey(), e.getValue().get(0));
 			}
 		}

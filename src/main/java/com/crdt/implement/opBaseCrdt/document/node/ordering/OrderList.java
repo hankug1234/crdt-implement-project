@@ -128,7 +128,7 @@ public class OrderList {
 		for(Block block : this.getList()) {
 			if(!block.isTombstone()) {
 				if(block.getValue().getContent().get().equals(tag)) {
-					block.isTombstone(); return;
+					block.setTombstone(); return;
 				}
 			}
 		}

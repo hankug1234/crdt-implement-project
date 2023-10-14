@@ -80,6 +80,8 @@ public class ListNode extends BranchNode{
 			Optional<Set<Id>> pres = clearElem(opId, id);
 			if(pres.isPresent()) {
 				result.addAll(pres.get());
+			}else {
+				this.getOrder().deleteByTag(id);
 			}
 		}
 		return Optional.of(result);

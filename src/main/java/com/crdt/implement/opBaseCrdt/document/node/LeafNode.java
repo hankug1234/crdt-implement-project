@@ -60,7 +60,11 @@ public class LeafNode implements Node{
 				.filter(e->e.getKey().getVectorClock().compareTo(opId.getVectorClock())>=Ord.Eq.getValue())
 				.collect(Collectors.toMap(e->e.getKey(), e->e.getValue()));
 		this.values = concurrent;
-		return Optional.of(concurrent.keySet());
+		Set<Id> result = concurrent.keySet();
+		if(result.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(result);
 	}
 
 	@Override

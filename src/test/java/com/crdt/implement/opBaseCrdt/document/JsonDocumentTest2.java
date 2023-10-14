@@ -3,10 +3,8 @@ package com.crdt.implement.opBaseCrdt.document;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Duration;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -23,18 +21,20 @@ import com.crdt.implement.opBaseCrdt.document.command.Command;
 import com.crdt.implement.opBaseCrdt.document.command.CommandTypes;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
-import com.crdt.implement.opBaseCrdt.document.typetag.*;
-import com.crdt.implement.opBaseCrdt.document.values.EmptyList;
-import com.crdt.implement.opBaseCrdt.document.values.Str;
+import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes;
+import com.crdt.implement.opBaseCrdt.document.values.*;
+import com.crdt.implement.opBaseCrdt.document.values.Number;
 import com.crdt.implement.persistence.InMemoryCrdtDB;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class JsonDocumentTest {
+class JsonDocumentTest2 {
 
 	public static List<Command> cmds = new LinkedList<>();
+	public static List<Command> cmds2 = new LinkedList<>();
+	
 	static Executor sharedExcutor;
 	static String replicaId1;
 	static InMemoryCrdtDB<Document,List<Operation>> db1 ;
@@ -72,73 +72,35 @@ class JsonDocumentTest {
 		cmds.add(command6);
 		cmds.add(command7);
 		
+		Command command8 = new CommandTypes.Assign(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")))), new EmptyMap());
+		Command command9 = new CommandTypes.Assign(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("age"))))), new Number(26));
+		Command command10 = new CommandTypes.Assign(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("job"))))), new Str("Developer"));
+		
+		cmds2.add(command8);
+		cmds2.add(command9);
+		cmds2.add(command10);
 	}
 	
-	@Test
-	@Order(4)
-	void testRemove() throws InterruptedException, ExecutionException, TimeoutException {
-		List<Command> cmds = new LinkedList<>();
-		List<Command> cmds1 = new LinkedList<>();
-		Command command1 = new CommandTypes.Delete(new ExprTypes.Var("carts"));
-		Command command2 = new CommandTypes.Insert(new ExprTypes.Var("carts") , new Str("stranger"), 1);
-		
-		cmds.add(command1);
-		
-		doc2.applyCommands(cmds);
-	
-		cmds1.add(command2);
-		doc.applyCommands(cmds1);
-		
-		Thread.sleep(1000);
-		
-		JSONObject result2 = doc2.query(new ExprTypes.Doc());
-		log.info(result2.toString());
-		
-		
-		JSONObject result = doc.query(new ExprTypes.Doc());
-		log.info(result.toString());
-		
-		assertTrue(true);
-	}
 	
 	@Test
-	@Order(3)
-	void testMove() throws InterruptedException, ExecutionException, TimeoutException {
-		List<Command> cmds = new LinkedList<>();
-		Command command1 = new CommandTypes.Move(new ExprTypes.Var("carts"), 2, 4, 1);
-		cmds.add(command1);
+	@Order(1)
+	void test1() throws InterruptedException, ExecutionException, TimeoutException {
+		
+		doc.connect(doc2);
+		doc2.connect(doc);
 		
 		doc2.applyCommands(cmds);
-		
-		Thread.sleep(1000);
-		
-		JSONObject result2 = doc2.query(new ExprTypes.Doc());
-		log.info(result2.toString());
-		
-		
-		JSONObject result = doc.query(new ExprTypes.Doc());
-		log.info(result.toString());
-		
-		
-		Command command2 = new CommandTypes.Move(new ExprTypes.Var("carts"), 0, 7, 1);
-		Command command3 = new CommandTypes.Move(new ExprTypes.Var("carts"), 0, 3, 1);
-		
-		List<Command> cmds1 = new LinkedList<>();
-		List<Command> cmds2 = new LinkedList<>();
-		
-		cmds1.add(command2);
-		cmds2.add(command3);
-		
-		doc2.applyCommands(cmds1);
 		doc.applyCommands(cmds2);
 		
 		Thread.sleep(1000);
 		
-		result2 = doc2.query(new ExprTypes.Doc());
+		JSONObject result2 = doc2.query(new ExprTypes.Doc());
 		log.info(result2.toString());
 		
 		
-		result = doc.query(new ExprTypes.Doc());
+		JSONObject result = doc.query(new ExprTypes.Doc());
 		log.info(result.toString());
 		
 		assertTrue(true);
@@ -146,33 +108,12 @@ class JsonDocumentTest {
 	
 	@Test
 	@Order(2)
-	void testQuery() throws InterruptedException, ExecutionException, TimeoutException {
+	void test2() throws InterruptedException, ExecutionException, TimeoutException {
+		List<Command> cmds = new LinkedList<>();
+		Command command = new CommandTypes.Delete(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")))));
+		cmds.add(command);
 		
-		List<Command> cmds2 = new LinkedList<>();
-		
-		doc.connect(doc2);
-		doc2.connect(doc);
-		
-		
-		Thread.sleep(1000);
-		
-		Command command1 = new CommandTypes.Let(new ExprTypes.Var("carts"),new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.ListT(new StringK("carts")))));
-		Command command2 = new CommandTypes.Insert(new ExprTypes.Var("carts"),new Str("kakao"),0);
-		Command command3 = new CommandTypes.Insert(new ExprTypes.Var("carts"),new Str("orange"),0);
-		
-		cmds2.add(command1);
-		cmds2.add(command2);
-		cmds2.add(command3);
-		
-		doc2.applyCommands(cmds2);
-		
-		cmds2.clear();
-		Command command4 = new CommandTypes.Insert(new ExprTypes.Var("carts"),new Str("dragon"),0);
-		Command command5 = new CommandTypes.Insert(new ExprTypes.Var("carts"),new Str("kiwi"),0);
-		cmds2.add(command4);
-		cmds2.add(command5);
-		
-		doc.applyCommands(cmds2);
+		doc2.applyCommands(cmds);
 		
 		Thread.sleep(1000);
 		
@@ -182,13 +123,7 @@ class JsonDocumentTest {
 		
 		JSONObject result = doc.query(new ExprTypes.Doc());
 		log.info(result.toString());
-		assertTrue(true);
-	}
-
-	@Test
-	@Order(1)
-	void testApplyCommands() throws InterruptedException, ExecutionException, TimeoutException {
-		doc.applyCommands(cmds);
+		
 		assertTrue(true);
 	}
 

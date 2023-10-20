@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
+import com.crdt.implement.opBaseCrdt.BwRGA.Command.Insert;
 import com.crdt.implement.opBaseCrdt.document.command.Command;
 import com.crdt.implement.opBaseCrdt.document.command.CommandTypes;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes;
@@ -125,6 +126,49 @@ class JsonDocumentTest2 {
 		log.info(result.toString());
 		
 		assertTrue(true);
+	}
+	
+	@Test
+	@Order(3)
+	void test3() throws InterruptedException, ExecutionException, TimeoutException {
+		Command command8 = new CommandTypes.Assign(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")))), new EmptyMap());
+		//Command command9 = new CommandTypes.Assign(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.ListT(new StringK("profile")))), new EmptyList());
+		Command command10 = new CommandTypes.Assign(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("job"))))), new Str("Developer"));
+		//Command command11 = new CommandTypes.Insert(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.ListT(new StringK("profile")))),new Str("hankug") , 0);
+		
+		Command command12 = new CommandTypes.Assign(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("explain"))))), new ObjectTypeVal("text"));
+		
+		Command command13 = new CommandTypes.Edit(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("explain"))))), new Insert<String>(0, List.of("hello".split(""))));
+		
+		List<Command> cmds1 = new LinkedList<>();
+		List<Command> cmds2 = new LinkedList<>();
+		
+		cmds1.add(command8);
+		cmds1.add(command10);
+		
+		cmds1.add(command12);
+		cmds1.add(command13);
+		
+		//cmds2.add(command9);
+		//cmds2.add(command11);
+		
+		doc2.applyCommands(cmds1);
+		doc.applyCommands(cmds2);
+		
+		Thread.sleep(1000);
+		
+		JSONObject result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		JSONObject result = doc.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		assertTrue(true);
+		
 	}
 
 }

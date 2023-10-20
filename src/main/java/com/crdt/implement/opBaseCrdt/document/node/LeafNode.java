@@ -26,45 +26,11 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public class LeafNode implements Node{
-	private Map<Id,LeafVal> values;
-
-	public List<LeafVal> getValues(){
-		return values.entrySet().stream().map(e->e.getValue()).toList();
-	}
 	
-	public LeafVal getValue() {
-		Set<Id> ids = this.values.keySet();
-		Iterator<Id> iter = ids.iterator();
-		Id min = iter.next();
-		while(iter.hasNext()) {
-			Id next = iter.next();
-			if(min.compareTo(next) > 0) {
-				min = next;
-			}
-		}
-		return values.get(min);
-	}
-	
-	public Map<Id,LeafVal> getIdValueMap(){
-		return this.values;
-	}
-	
-	public void setRegValue(Id id,LeafVal value) {
-		this.values.put(id, value);
-	}
 	
 	@Override
 	public Optional<Set<Id>> clear(Id opId) {
-		// TODO Auto-generated method stub
-		Map<Id,LeafVal> concurrent = values.entrySet().stream()
-				.filter(e->e.getKey().getVectorClock().compareTo(opId.getVectorClock())>=Ord.Eq.getValue())
-				.collect(Collectors.toMap(e->e.getKey(), e->e.getValue()));
-		this.values = concurrent;
-		Set<Id> result = concurrent.keySet();
-		if(result.isEmpty()) {
-			return Optional.empty();
-		}
-		return Optional.of(result);
+		return Optional.empty();
 	}
 
 	@Override
@@ -80,16 +46,6 @@ public class LeafNode implements Node{
 
 	@Override
 	public Object toJson() {
-		if(this.values.size() > 1) {
-			JSONObject result = new JSONObject();
-			for(Map.Entry<Id,LeafVal> e : values.entrySet()) {
-				result.put(e.getKey().getReplicaId(), e.getValue().toString());
-			}
-		}
-		
-		if(!values.isEmpty()) {
-			return this.getValue();
-		}
 		return null;
 	}
 

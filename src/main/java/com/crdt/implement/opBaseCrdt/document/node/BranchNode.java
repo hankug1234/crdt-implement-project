@@ -39,6 +39,8 @@ import com.crdt.implement.opBaseCrdt.document.values.BranchVal;
 import com.crdt.implement.opBaseCrdt.document.values.EmptyList;
 import com.crdt.implement.opBaseCrdt.document.values.EmptyMap;
 import com.crdt.implement.opBaseCrdt.document.values.LeafVal;
+import com.crdt.implement.opBaseCrdt.document.values.ObjectTypeVal;
+import com.crdt.implement.opBaseCrdt.document.values.ObjectVal;
 import com.crdt.implement.opBaseCrdt.document.values.Val;
 
 import lombok.AllArgsConstructor;
@@ -173,6 +175,7 @@ public class BranchNode implements Node{
 				this.addId(key, op.getId(), signal);
 				RegNode reg = (RegNode) this.getChild(key);
 				reg.clear(op.getId());
+				
 				LeafVal leafVal = (LeafVal) value;
 				reg.setRegValue(op.getId(),leafVal);
 				this.children.put(key, reg);
@@ -213,6 +216,18 @@ public class BranchNode implements Node{
 				SignalTypes.MoveS moveS = (MoveS) signal;
 				ListNode list = (ListNode) node.get();
 				list.getOrder().move(moveS.getFrom(), moveS.getTo(),moveS.getPriority(),moveS.getLocation(),new OrderId(moveS.getReplicaId(),moveS.getSeqNr()));
+			}
+			
+		}else if(signal instanceof SignalTypes.EditS) {
+			Node node = this.getChild(key);
+			if(node instanceof RegNode) {
+				RegNode reg = (RegNode) node;
+				LeafVal val = reg.getValue();
+				if(val instanceof ObjectVal) {
+					SignalTypes.EditS edit = (SignalTypes.EditS) signal;
+					ObjectVal objectVal = (ObjectVal) val;
+					objectVal.effect(edit.getData());
+				}
 			}
 			
 		}else {

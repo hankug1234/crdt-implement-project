@@ -6,6 +6,7 @@ import java.util.Map;
 import com.crdt.implement.opBaseCrdt.document.cursor.Cursor;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Var;
 import com.crdt.implement.opBaseCrdt.document.node.Node;
+import com.crdt.implement.opBaseCrdt.document.values.Text;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -21,11 +21,17 @@ import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.node.ListNode;
 import com.crdt.implement.opBaseCrdt.document.node.MapNode;
 import com.crdt.implement.opBaseCrdt.document.node.Node;
+import com.crdt.implement.opBaseCrdt.document.node.RegNode;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.Block;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.MoveMetaData;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes;
+import com.crdt.implement.opBaseCrdt.document.values.LeafVal;
+import com.crdt.implement.opBaseCrdt.document.values.ObjectTypeVal;
+import com.crdt.implement.opBaseCrdt.document.values.ObjectVal;
+import com.crdt.implement.opBaseCrdt.document.values.Text;
+import com.crdt.implement.opBaseCrdt.document.values.Val;
 import com.crdt.implement.reliableBroadcast.OpBaseEvent;
 import com.crdt.implement.vectorClock.VectorClock;
 
@@ -38,6 +44,17 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 	
 	public OpBaseDocOperation(String replicaId) {
 		this.replicaId = replicaId;
+	}
+	
+	private Val valueConverter(Val value) {
+		if(value instanceof ObjectTypeVal) {
+			ObjectTypeVal type = (ObjectTypeVal) value;
+			if(type.getType().equals("text")){
+				return new Text(replicaId);
+			}
+		}
+		
+		return value;
 	}
 	
 	
@@ -100,9 +117,17 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 						Cursor cur = evalExpr(crdt,var.getVar());
 						crdt.setVar(cur);
 						return Optional.empty();
+					}else if(cmd instanceof CommandTypes.Edit) {
+						CommandTypes.Edit edit = (CommandTypes.Edit) cmd;
+						Cursor cur = evalExpr(crdt,edit.getExpr());
+						op = makeOp(evalExpr(crdt,edit.getExpr()),new SignalTypes.EditS(edit.getBehavior()));
+						
 					}
 					else {
 						throw new RuntimeException();
+					}
+					if(op == null) {
+						return Optional.empty();
 					}
 					return Optional.of(op);
 				}
@@ -125,7 +150,19 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 				if(insert.getMeta() == null) {
 					setMetaData(crdt,op.getCur(),insert);
 				}
+				
+				insert.setValue(this.valueConverter(insert.getValue()));
+				
+			}else if((op.getSignal() instanceof SignalTypes.AssignS)) {
+				SignalTypes.AssignS assign = (SignalTypes.AssignS) op.getSignal();
+				assign.setValue(this.valueConverter(assign.getValue()));
+			}else if((op.getSignal() instanceof SignalTypes.EditS)){
+				SignalTypes.EditS edit = (SignalTypes.EditS) op.getSignal(); 
+				if(!this.setObjectTypeValSignal(crdt, op.getCur(), edit)) {
+					continue;
+				}
 			}
+			
 			node.applyOp(op);
 		}
 		
@@ -198,6 +235,29 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 		IndexK indexK = new IndexK(uuid.toString(),this.replicaId);
 		
 		return new SignalTypes.InsertS(insert.getValue(), null,insert.getIndex(), indexK);
+	}
+	
+	public boolean setObjectTypeValSignal(Document crdt, Cursor cur,SignalTypes.EditS edit) {
+		Optional<Node> node = crdt.getDocument().query(cur);
+		if(node.isPresent()) {
+			
+			Node target = node.get();
+			if(target instanceof RegNode) {
+				RegNode reg = (RegNode) target;
+				LeafVal val = reg.getValue();
+				
+				if(val instanceof ObjectVal) {
+					ObjectVal objectVal = (ObjectVal) val;
+					 Optional<Object> data = objectVal.prepare(edit.getData());
+					 if(data.isPresent()) {
+						 edit.setData(data.get());
+						 return true;
+					 }
+				}
+				
+			}
+		}
+		return false;
 	}
 	
 	public void setMetaData(Document crdt,Cursor cur,SignalTypes.InsertS insertS) {

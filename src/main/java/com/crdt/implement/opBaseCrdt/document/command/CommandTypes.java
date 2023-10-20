@@ -2,8 +2,6 @@ package com.crdt.implement.opBaseCrdt.document.command;
 
 import com.crdt.implement.opBaseCrdt.document.expression.Expr;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes;
-import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
-import com.crdt.implement.opBaseCrdt.document.signal.LocationInstructor;
 import com.crdt.implement.opBaseCrdt.document.values.Val;
 
 import lombok.AllArgsConstructor;
@@ -31,6 +29,13 @@ public class CommandTypes {
 		private Expr expr;
 		private Val value;
 		private int index;
+	}
+	
+	@AllArgsConstructor
+	@Getter
+	public static class Edit implements Command{
+		private Expr expr;
+		private Object behavior;
 	}
 	
 	@AllArgsConstructor

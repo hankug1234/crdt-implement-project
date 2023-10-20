@@ -18,4 +18,12 @@ public class OpBaseEvent <E> {
 		this.vectorClock = vectorClock;
 		this.data = data;
 	}
+	
+	public OpBaseEvent(E data) {
+		this.originReplicaId = null;
+		this.originSeqNr = 0;
+		this.localSeqNr = 0;
+		this.vectorClock = null;
+		this.data = data;
+	}
 }

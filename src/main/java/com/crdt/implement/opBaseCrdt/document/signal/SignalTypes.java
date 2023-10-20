@@ -1,5 +1,6 @@
 package com.crdt.implement.opBaseCrdt.document.signal;
 
+import com.crdt.implement.opBaseCrdt.BwRGA.BwRgaData;
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.OrderId;
@@ -14,6 +15,10 @@ public class SignalTypes {
 	@Getter
 	public static class AssignS implements Signal{
 		private Val value;
+		
+		public void setValue(Val value) {
+			this.value = value;
+		}
 	}
 	
 	@AllArgsConstructor
@@ -28,10 +33,24 @@ public class SignalTypes {
 		public void setMeta(BlockMetaData meta) {
 			this.meta = meta;
 		}
+		
+		public void setValue(Val value) {
+			this.value = value;
+		}
 	}
 	
 	public static class DeleteS implements Signal{
 		
+	}
+	
+	@AllArgsConstructor
+	@Getter
+	public static class EditS implements Signal{
+		Object data;
+		
+		public void setData(Object data) {
+			this.data = data;
+		}
 	}
 	
 	@AllArgsConstructor

@@ -151,14 +151,19 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 					setMetaData(crdt,op.getCur(),insert);
 				}
 				
-				insert.setValue(this.valueConverter(insert.getValue()));
+				op = new Operation(op.getId(),op.getCur(),new SignalTypes
+						.InsertS(this.valueConverter(insert.getValue()),insert.getMeta(), insert.getIndex(), insert.getKey()));
 				
 			}else if((op.getSignal() instanceof SignalTypes.AssignS)) {
+				
 				SignalTypes.AssignS assign = (SignalTypes.AssignS) op.getSignal();
-				assign.setValue(this.valueConverter(assign.getValue()));
+				op = new Operation(op.getId(),op.getCur(),new SignalTypes.AssignS(this.valueConverter(assign.getValue())));
+				
 			}else if((op.getSignal() instanceof SignalTypes.EditS)){
+				
 				SignalTypes.EditS edit = (SignalTypes.EditS) op.getSignal(); 
-				if(!this.setObjectTypeValSignal(crdt, op.getCur(), edit)) {
+				
+				if(event.getOriginReplicaId().equals(this.replicaId) && !this.setObjectTypeValSignal(crdt, op.getCur(), edit)) {
 					continue;
 				}
 			}
@@ -238,6 +243,7 @@ public class OpBaseDocOperation implements OpBaseCrdtOperation<Document,JSONObje
 	}
 	
 	public boolean setObjectTypeValSignal(Document crdt, Cursor cur,SignalTypes.EditS edit) {
+		
 		Optional<Node> node = crdt.getDocument().query(cur);
 		if(node.isPresent()) {
 			

@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
 import com.crdt.implement.opBaseCrdt.BwRGA.Command.Insert;
+import com.crdt.implement.opBaseCrdt.BwRGA.Command.RemoveAt;
 import com.crdt.implement.opBaseCrdt.document.command.Command;
 import com.crdt.implement.opBaseCrdt.document.command.CommandTypes;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes;
@@ -167,8 +168,75 @@ class JsonDocumentTest2 {
 		JSONObject result = doc.query(new ExprTypes.Doc());
 		log.info(result.toString());
 		
+		cmds1.clear();
+		cmds2.clear();
+		
+		Command command14 = new CommandTypes.Edit(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("explain"))))), new Insert<String>(5, List.of(" master".split(""))));
+		
+		Command command15 = new CommandTypes.Edit(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("explain"))))), new Insert<String>(5, List.of(" hankug".split(""))));
+		
+		
+		cmds1.add(command14);
+		cmds2.add(command15);
+		
+		doc2.applyCommands(cmds1);
+		doc.applyCommands(cmds2);
+		
+		Thread.sleep(1000);
+		
+		result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		result = doc.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		
+		cmds1.clear();
+		cmds2.clear();
+		
+		
 		assertTrue(true);
 		
+	}
+	
+	@Test
+	@Order(4)
+	void test4() throws InterruptedException, ExecutionException, TimeoutException {
+		List<Command> cmds1 = new LinkedList<>();
+		List<Command> cmds2 = new LinkedList<>();
+		
+		JSONObject result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		JSONObject result = doc.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		
+		Command command16 = new CommandTypes.Edit(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				new ExprTypes.Get(new TagTypes.RegT(new StringK("explain"))))), new Insert<String>(2, List.of(" host".split(""))));
+		
+		//Command command17 = new CommandTypes.Edit(new ExprTypes.Doc(new ExprTypes.Get(new TagTypes.MapT(new StringK("profile")),
+				//new ExprTypes.Get(new TagTypes.RegT(new StringK("explain"))))), new RemoveAt(0,5));
+		
+		
+		cmds1.add(command16);
+		//cmds2.add(command17);
+		
+		doc2.applyCommands(cmds1);
+		//doc.applyCommands(cmds2);
+		
+		Thread.sleep(1000);
+		
+		result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		result = doc.query(new ExprTypes.Doc());
+		log.info(result.toString());
 	}
 
 }

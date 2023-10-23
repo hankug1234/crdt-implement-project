@@ -53,6 +53,7 @@ public class OpBaseBwRgaOperation<A> implements OpBaseCrdtOperation<BwRgaState<A
 		if(data instanceof Data.Inserted) {
 			
 			Data.Inserted<A> inserted = (Data.Inserted<A>) data;
+			log.info(replicaId+" : after -> "+inserted.getAfter().toString()+" / at -> "+inserted.getAt().toString());
 			result = applyInserted(inserted.getAfter(), inserted.getAt(), inserted.getValues(), crdt);
 			
 		}else {

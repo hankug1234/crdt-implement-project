@@ -27,6 +27,7 @@ public class Text extends ObjectVal{
 	private OpBaseBwRgaOperation<String> execute;
 	
 	public Text(String replicaId) {
+		log.info(replicaId+" : text created");
 		this.execute = new OpBaseBwRgaOperation<>(replicaId);
 		this.value = execute.Default();
 	}
@@ -55,7 +56,7 @@ public class Text extends ObjectVal{
 		if(data instanceof BwRgaData) {
 			BwRgaData<String> bwData = (BwRgaData<String>) data;
 			OpBaseEvent<BwRgaData<String>> bwOp = new OpBaseEvent<>(bwData);
-			this.execute.Effect(value, bwOp);
+			this.value = this.execute.Effect(value, bwOp);
 		}
 	}
 	

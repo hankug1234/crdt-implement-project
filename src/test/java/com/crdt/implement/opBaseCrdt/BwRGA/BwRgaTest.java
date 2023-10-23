@@ -2,6 +2,7 @@ package com.crdt.implement.opBaseCrdt.BwRGA;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -16,9 +17,11 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
-
 import com.crdt.implement.persistence.InMemoryCrdtDB;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class BwRgaTest {
 
@@ -106,5 +109,15 @@ class BwRgaTest {
 		assertEquals(a.query().stream().flatMap(b->b.getContent().getContent().stream()).collect(Collectors.joining()),"hello of the world han");
 		assertEquals(c.query().stream().flatMap(b->b.getContent().getContent().stream()).collect(Collectors.joining()),"hello of the world han");
 	}
+	
+	@Test
+	@Order(4)
+	void testlog() throws InterruptedException, ExecutionException, TimeoutException {
+		c.insert(3, List.of(" last".split("")));
+		log.info(c.query().stream().flatMap(b->b.getContent().getContent().stream()).collect(Collectors.joining()));
+		
+		assertTrue(true);
+	}
+	
 
 }

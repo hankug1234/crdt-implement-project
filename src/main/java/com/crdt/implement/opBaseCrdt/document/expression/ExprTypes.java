@@ -1,5 +1,8 @@
 package com.crdt.implement.opBaseCrdt.document.expression;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import com.crdt.implement.opBaseCrdt.document.keyType.IndexK;
 import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
 import com.crdt.implement.opBaseCrdt.document.typetag.BranchTag;
@@ -11,6 +14,35 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class ExprTypes {
+	
+	public static class Root{
+		List<Expr> paths = new LinkedList<>();
+		
+		public Root dict(String key) {
+			paths.add(new Get(new TagTypes.MapT(new StringK(key))));
+			return this;
+		}
+		
+		public Root list(String key) {
+			paths.add(new Get(new TagTypes.ListT(new StringK(key))));
+			return this;
+		}
+		
+		public Root index(int i) {
+			paths.add(new Index(i));
+			return this;
+		}
+		
+		public Expr build() {
+			Expr result = new Doc();
+			Expr next = result;
+			for(Expr expr : paths) {
+				next.setExpr(expr);
+				next = expr;
+			}
+			return result;
+		}
+	}
 	
 	@AllArgsConstructor
 	@Getter

@@ -14,6 +14,10 @@ import org.json.JSONObject;
 import com.crdt.implement.opBaseCrdt.document.command.Command;
 import com.crdt.implement.opBaseCrdt.document.command.CommandTypes;
 import com.crdt.implement.opBaseCrdt.document.expression.Expr;
+import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes;
+import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Root;
+import com.crdt.implement.opBaseCrdt.document.keyType.StringK;
+import com.crdt.implement.opBaseCrdt.document.typetag.TagTypes;
 import com.crdt.implement.persistence.OpBaseCrdtDB;
 import com.crdt.implement.reliableBroadcast.EndPoint;
 import com.crdt.implement.reliableBroadcast.OpBaseProtocal;
@@ -54,6 +58,31 @@ public class JsonDocument {
 		CompletionStage<OpBaseResponse> stage = AskPattern
 				.ask(system, replay-> new Protocal.Command<List<Command>>(cloneCmds, replay), Duration.ofSeconds(3), system.scheduler());
 	}
+	
+	public void assign() {
+		
+	}
+	
+	public void insert() {
+		
+	}
+	
+	public void edit() {
+		
+	}
+	
+	public void delete() {
+		
+	}
+	
+	public void move() {
+		
+	}
+	
+	public void let(String variableName, Root paths) throws InterruptedException, ExecutionException, TimeoutException {
+		this.applyCommands(List.of(new CommandTypes.Let(new ExprTypes.Var(variableName),paths.build())));
+	}
+	
 	
 	public void connect(JsonDocument  json) {
 		system.tell(new Protocal.Connect(json.getReplicaId(),new EndPoint(json.getSystem())));

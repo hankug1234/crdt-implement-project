@@ -10,4 +10,8 @@ public enum Location {
 		this.value = value;
 	}
 	
+	public int getValue() {
+		return this.value;
+	}
+	
 }

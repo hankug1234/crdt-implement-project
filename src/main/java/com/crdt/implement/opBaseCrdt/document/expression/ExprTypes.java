@@ -16,7 +16,31 @@ import lombok.Setter;
 public class ExprTypes {
 	
 	public static class Root{
-		List<Expr> paths = new LinkedList<>();
+		List<Expr> paths;
+		
+		public Root() {
+			this.paths = new LinkedList<>();
+		}
+		
+		public Root(List<Expr> exprs) {
+			this.paths = exprs;
+		}
+		
+		public Root clone() {
+			return new Root(new LinkedList<>(this.paths));
+		}
+		
+		public Root value(String valueName) {
+			paths.clear();
+			paths.add(new ExprTypes.Var(valueName));
+			return this;
+		}
+		
+		public Root document() {
+			paths.clear();
+			paths.add(new ExprTypes.Doc());
+			return this;
+		}
 		
 		public Root dict(String key) {
 			paths.add(new Get(new TagTypes.MapT(new StringK(key))));
@@ -28,19 +52,27 @@ public class ExprTypes {
 			return this;
 		}
 		
+		public Root reg(String key) {
+			paths.add(new Get(new TagTypes.RegT(new StringK(key))));
+			return this;
+		}
+		
 		public Root index(int i) {
 			paths.add(new Index(i));
 			return this;
 		}
 		
 		public Expr build() {
-			Expr result = new Doc();
-			Expr next = result;
-			for(Expr expr : paths) {
-				next.setExpr(expr);
-				next = expr;
+			if(paths.size() > 0) {
+				Expr result = paths.get(0);
+				Expr next = result;
+				for(int i=1; i<paths.size();i++) {
+					next.setExpr(paths.get(i));
+					next = paths.get(i);
+				}
+				return result;
 			}
-			return result;
+			return null;
 		}
 	}
 	

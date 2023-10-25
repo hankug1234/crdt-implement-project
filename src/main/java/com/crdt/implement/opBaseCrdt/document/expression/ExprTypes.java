@@ -16,30 +16,36 @@ import lombok.Setter;
 public class ExprTypes {
 	
 	public static class Root{
-		List<Expr> paths;
+		public List<Expr> paths;
 		
-		public Root() {
+		private Root() {
 			this.paths = new LinkedList<>();
 		}
 		
-		public Root(List<Expr> exprs) {
+		private Root(List<Expr> exprs) {
 			this.paths = exprs;
 		}
 		
 		public Root clone() {
-			return new Root(new LinkedList<>(this.paths));
+			List<Expr> result = new LinkedList<>();
+			result.addAll(this.paths);
+			return new Root(result);
 		}
 		
-		public Root value(String valueName) {
-			paths.clear();
+		public static Root value(String valueName) {
+			
+			List<Expr> paths = new LinkedList<>();
 			paths.add(new ExprTypes.Var(valueName));
-			return this;
+			
+			return new Root(paths);
 		}
 		
-		public Root document() {
-			paths.clear();
+		public static Root document() {
+			
+			List<Expr> paths = new LinkedList<>();
 			paths.add(new ExprTypes.Doc());
-			return this;
+			
+			return new Root(paths);
 		}
 		
 		public Root dict(String key) {
@@ -64,11 +70,12 @@ public class ExprTypes {
 		
 		public Expr build() {
 			if(paths.size() > 0) {
-				Expr result = paths.get(0);
+				Expr result = paths.get(0).clone();
 				Expr next = result;
 				for(int i=1; i<paths.size();i++) {
-					next.setExpr(paths.get(i));
-					next = paths.get(i);
+					Expr cur = paths.get(i).clone();
+					next.setExpr(cur);
+					next = cur;
 				}
 				return result;
 			}
@@ -85,6 +92,10 @@ public class ExprTypes {
 		public Doc() {
 			this.expr = null;
 		}
+		
+		public Expr clone() {
+			return new Doc();
+		}
 	}
 	
 	@AllArgsConstructor
@@ -97,6 +108,10 @@ public class ExprTypes {
 		public Var(String name) {
 			this.name = name; 
 			this.expr = null;
+		}
+		
+		public Expr clone() {
+			return new Var(name);
 		}
 		
 		
@@ -131,6 +146,10 @@ public class ExprTypes {
 			this.expr = null;
 		}
 		
+		public Expr clone() {
+			return new Get(tag);
+		}
+		
 	}
 	
 	@AllArgsConstructor
@@ -143,6 +162,10 @@ public class ExprTypes {
 		public Index(int index) {
 			this.index = index;
 			this.expr = null;
+		}
+		
+		public Expr clone() {
+			return new Index(index);
 		}
 	}
 	

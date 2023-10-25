@@ -8,6 +8,9 @@ import com.crdt.implement.opBaseCrdt.BwRGA.Block;
 import com.crdt.implement.opBaseCrdt.BwRGA.BwRgaCommand;
 import com.crdt.implement.opBaseCrdt.BwRGA.BwRgaData;
 import com.crdt.implement.opBaseCrdt.BwRGA.BwRgaState;
+import com.crdt.implement.opBaseCrdt.BwRGA.Command;
+import com.crdt.implement.opBaseCrdt.BwRGA.Command.Insert;
+import com.crdt.implement.opBaseCrdt.BwRGA.Command.RemoveAt;
 import com.crdt.implement.opBaseCrdt.BwRGA.OpBaseBwRgaOperation;
 import com.crdt.implement.opBaseCrdt.document.node.BranchNode;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
@@ -30,6 +33,15 @@ public class Text extends ObjectVal{
 		log.info(replicaId+" : text created");
 		this.execute = new OpBaseBwRgaOperation<>(replicaId);
 		this.value = execute.Default();
+	}
+	
+	public static Insert<String> insert(int index,String value){
+		List<String> list = List.of(value.split(""));
+		return new Command.Insert<>(index, list);
+	}
+	
+	public static RemoveAt<String> remove(int index, int count){
+		return new Command.RemoveAt<>(index,count);
 	}
 	
 	public Val clone() {

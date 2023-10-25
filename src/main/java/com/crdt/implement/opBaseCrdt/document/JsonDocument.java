@@ -34,7 +34,9 @@ import com.crdt.implement.reliableBroadcast.Replicator;
 import akka.actor.typed.ActorSystem;
 import akka.actor.typed.javadsl.AskPattern;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Getter
 public class JsonDocument {
 	private ActorSystem<OpBaseProtocal> system;
@@ -60,15 +62,14 @@ public class JsonDocument {
 			
 			
 			for(String key : data.keySet()) {
-				Root newPaths = paths.clone();
 				Object value = data.get(key);
 				
 				if(value instanceof JSONObject) {
-					list.addAll(convert(newPaths.dict(key),value,0,false));
+					list.addAll(convert(paths.clone().dict(key),value,0,false));
 				}else if(value instanceof JSONArray) {
-					list.addAll(convert(newPaths.list(key),value,0,false));
+					list.addAll(convert(paths.clone().list(key),value,0,false));
 				}else if(value instanceof Val) {
-					list.addAll(convert(newPaths.reg(key),value,0,false));
+					list.addAll(convert(paths.clone().reg(key),value,0,false));
 				}
 				
 			}

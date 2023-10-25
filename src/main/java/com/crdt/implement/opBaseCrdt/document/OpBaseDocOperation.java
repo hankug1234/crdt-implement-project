@@ -27,6 +27,7 @@ import com.crdt.implement.opBaseCrdt.document.node.ordering.BlockMetaData;
 import com.crdt.implement.opBaseCrdt.document.node.ordering.MoveMetaData;
 import com.crdt.implement.opBaseCrdt.document.signal.Signal;
 import com.crdt.implement.opBaseCrdt.document.signal.SignalTypes;
+import com.crdt.implement.opBaseCrdt.document.values.EmptyMap;
 import com.crdt.implement.opBaseCrdt.document.values.LeafVal;
 import com.crdt.implement.opBaseCrdt.document.values.ObjectTypeVal;
 import com.crdt.implement.opBaseCrdt.document.values.ObjectVal;

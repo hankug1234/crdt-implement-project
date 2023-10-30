@@ -113,6 +113,11 @@ public class JsonDocument {
 	}
 	
 	
+	public JSONObject get(Root root) throws InterruptedException, ExecutionException, TimeoutException{
+		Expr expr = root.build();
+		return this.query(expr);
+	}
+	
 	public JSONObject query(Expr expr) throws InterruptedException, ExecutionException, TimeoutException{
 		
 		CompletionStage<OpBaseResponse> stage = AskPattern

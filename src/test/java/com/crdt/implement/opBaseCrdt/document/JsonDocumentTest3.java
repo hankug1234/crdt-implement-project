@@ -117,6 +117,25 @@ public class JsonDocumentTest3 {
 		
 		doc1.move(Root.document().list("carts"), 1, 3, Location.after);
 		
+		Thread.sleep(100);
+		
+		doc1.disconnect(doc2);
+		doc2.disconnect(doc1);
+		
+		doc1.insert(Root.document().list("carts"), 0, new Str("donut"));
+		
+		Thread.sleep(200);
+		
+		result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		result = doc1.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		doc1.connect(doc2);
+		doc2.connect(doc1);
+		
 		Thread.sleep(200);
 		
 		result2 = doc2.query(new ExprTypes.Doc());

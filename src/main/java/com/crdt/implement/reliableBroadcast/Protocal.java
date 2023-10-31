@@ -22,6 +22,12 @@ public class Protocal{
 	
 	@Getter
 	@AllArgsConstructor
+	public static class Disconnect implements OpBaseProtocal{
+		private final String replicaId;
+	}
+	
+	@Getter
+	@AllArgsConstructor
 	public static class Replicate implements OpBaseProtocal{
 		private final long seqNr; 
 		private final int maxCount;

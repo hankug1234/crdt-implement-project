@@ -237,6 +237,16 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 		return Behaviors.same();
 	}
 	
+	private Behavior<OpBaseProtocal> onDisconnect(Protocal.Disconnect disconnect){
+		
+		getContext().getLog().info("{} : get disconnect protocal to {}",replicaId,disconnect.getReplicaId());
+		
+		Object timerKey = this.replicatingNodes.get(disconnect.getReplicaId()).getTimeoutKey();
+		timer.cancel(timerKey);
+		
+		return Behaviors.same();
+	}
+	
 	private Behavior<OpBaseProtocal> onSnapshot(Protocal.Snapshot snapshot){
 		getContext().getLog().info("{} : save snapshot",replicaId);
 		
@@ -266,6 +276,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 				.onMessage(Protocal.ReplicateTimeout.class, this::onReplicateTimeout)
 				.onMessage(Protocal.Command.class, this::onCommand)
 				.onMessage(Protocal.Connect.class, this::onConnect)
+				.onMessage(Protocal.Disconnect.class, this::onDisconnect)
 				.onMessage(Protocal.Snapshot.class, this::onSnapshot)
 				.onMessage(Protocal.Stop.class, message -> Behaviors.stopped())
 				.onAnyMessage(message -> Behaviors.stopped())

@@ -202,4 +202,8 @@ public class JsonDocument {
 		system.tell(new Protocal.Connect(json.getReplicaId(),new EndPoint(json.getSystem())));
 	}
 	
+	public void disconnect(JsonDocument json) {
+		system.tell(new Protocal.Disconnect(json.getReplicaId()));
+	}
+	
 }

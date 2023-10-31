@@ -142,8 +142,18 @@ p2p 방식의 동시 편집을 가능하게함
     //carts 배열의 1번 인덱스 값을 3번 인덱스 뒤로 위치 변경 
     doc1.move(Root.document().list("carts"), 1, 3, Location.after);
     
+    // 동가화 종료
+    doc1.disconnect(doc2);
+    doc2.disconnect(doc1);
     
+    //carts 리스트의 0 번째 인덱스 위치에 donut 삽입		
+    doc1.insert(Root.document().list("carts"), 0, new Str("donut"));
+    	
+    doc1.connect(doc2);
+    doc2.connect(doc1);
     
+    // 동기화를 위한 대기 
+    Thread.sleep(200);
     
     //편집 결과값 JSONObject 형식으로 조회 root 경로 아래 모든 json 값 조회
     JSONObject result2 = doc2.get(Root.document());

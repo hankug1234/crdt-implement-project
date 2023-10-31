@@ -238,7 +238,7 @@ public class Replicator<S,Q,C,E> extends AbstractBehavior<OpBaseProtocal>{
 	}
 	
 	private Behavior<OpBaseProtocal> onSnapshot(Protocal.Snapshot snapshot){
-		getContext().getLog().info("{} : get snapshot protocal",replicaId);
+		getContext().getLog().info("{} : save snapshot",replicaId);
 		
 		if(this.state.isDirty()) {
 			this.state.setDirty(false);

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.RETURNS_DEFAULTS;
 import static org.mockito.Mockito.RETURNS_MOCKS;
+import static org.mockito.Mockito.RETURNS_SELF;
 
 import java.time.Duration;
 import java.util.LinkedList;
@@ -22,11 +23,13 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
-import com.crdt.implement.opBaseCrdt.document.command.Command;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes;
 import com.crdt.implement.opBaseCrdt.document.expression.ExprTypes.Root;
 import com.crdt.implement.opBaseCrdt.document.values.Str;
+import com.crdt.implement.opBaseCrdt.document.values.Text;
+import com.crdt.implement.opBaseCrdt.document.values.Location;
 import com.crdt.implement.opBaseCrdt.document.values.Number;
+import com.crdt.implement.opBaseCrdt.document.values.ObjectTypeVal;
 import com.crdt.implement.persistence.InMemoryCrdtDB;
 
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +95,35 @@ public class JsonDocumentTest3 {
 		
 		
 		JSONObject result = doc1.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		
+		doc2.assign(Root.document().dict("profile").reg("explain"), new ObjectTypeVal("text"));
+		doc2.edit(Root.document().dict("profile").reg("explain"), Text.insert(0, "hello"));
+		
+		Thread.sleep(100);
+		
+		doc1.edit(Root.document().dict("profile").reg("explain"), Text.insert(5, " master"));
+		doc2.edit(Root.document().dict("profile").reg("explain"), Text.insert(5, " hankug"));
+		
+		Thread.sleep(200);
+		
+		result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		result = doc1.query(new ExprTypes.Doc());
+		log.info(result.toString());
+		
+		doc1.move(Root.document().list("carts"), 1, 3, Location.after);
+		
+		Thread.sleep(200);
+		
+		result2 = doc2.query(new ExprTypes.Doc());
+		log.info(result2.toString());
+		
+		
+		result = doc1.query(new ExprTypes.Doc());
 		log.info(result.toString());
 		
 		assertTrue(true);
